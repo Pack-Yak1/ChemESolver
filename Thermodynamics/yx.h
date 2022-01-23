@@ -29,6 +29,15 @@ public:
     // Finds a value of mole fraction of component 1 which satisfies the modified
     // Raoult model for temperature `T` in units of `t_unit`.
     double find_x1(double T, T_unit t_unit);
+
+    // Finds a value of `T` in units of K that is consistent with this model's
+    // pressure and the value of `x1`.
+    double find_T(double x1);
+
+    void generate_yx_data(std::vector<double> &x_data, std::vector<double> &y_data, int num_points);
+
+private:
+    double psat_helper(AntoineModel a, double T);
 };
 
 #endif
