@@ -24,7 +24,7 @@ double convert_T(double T, T_unit initial, T_unit final)
         c = T - 273.15;
         return final == C ? c : (c - 32) / 1.8;
     default:
-        throw "Unrecognized unit of temperature";
+        throw "Unrecognized unit of temperature.\n";
     }
 }
 
@@ -44,16 +44,16 @@ double convert_P(double P, P_unit initial, P_unit final)
     case psi:
         return final == Pa ? P * 6895 : P / 14.5038;
     default:
-        throw "Unrecognized unit of pressure";
+        throw "Unrecognized unit of pressure.\n";
     }
 }
 
-int main()
-{
-    cout << convert_P(101325, P_unit::Pa, P_unit::bar) << '\n';
-    cout << convert_P(101325, P_unit::Pa, P_unit::psi) << '\n';
-    cout << convert_P(1000, P_unit::psi, P_unit::bar) << '\n';
-    cout << convert_P(1000, P_unit::bar, P_unit::psi) << '\n';
+// int main()
+// {
+//     cout << convert_P(101325, P_unit::Pa, P_unit::bar) << '\n';
+//     cout << convert_P(101325, P_unit::Pa, P_unit::psi) << '\n';
+//     cout << convert_P(1000, P_unit::psi, P_unit::bar) << '\n';
+//     cout << convert_P(1000, P_unit::bar, P_unit::psi) << '\n';
 
-    return 0;
-}
+//     return 0;
+// }
