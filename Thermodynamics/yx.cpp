@@ -10,6 +10,9 @@
 #include <vector>
 #include <nlopt.hpp>
 #include <fstream>
+#include <cmath>
+// #include <boost/tuple/tuple.hpp>
+// #include "gnuplot-iostream.h"
 
 const double REL_XTOL = 1e-10;
 
@@ -19,36 +22,12 @@ ModifiedRaoultModel::
     ModifiedRaoultModel(AntoineModel a1, AntoineModel a2, BinaryWilsonModel b,
                         T_unit t_unit, double P, P_unit p_unit)
 {
-    // if (a1.t_unit != t_unit)
-    // {
-    //     throw "The first Antoine Model provided uses a different unit of temperature than the one specified for the Modified Raoult Model.\n";
-    // }
-    // if (a2.t_unit != t_unit)
-    // {
-    //     throw "The second Antoine Model provided uses a different unit of temperature than the one specified for the Modified Raoult Model.\n";
-    // }
-    // if (a1.p_unit != p_unit)
-    // {
-    //     throw "The first Antoine Model provided uses a different unit of pressure than the one specified for the Modified Raoult Model.\n";
-    // }
-    // if (a2.p_unit != p_unit)
-    // {
-    //     throw "The second Antoine Model provided uses a different unit of pressure than the one specified for the Modified Raoult Model.\n";
-    // }
-    // b.setT(T, t_unit);
     this->a1 = a1;
     this->a2 = a2;
     this->b = b;
     this->t_unit = t_unit;
     this->P = P;
     this->p_unit = p_unit;
-
-    // for (int i = 0; i <= NUM_POINTS; i++)
-    // {
-    //     double x1 = i / NUM_POINTS;
-    //     double x2 = 1 - x1;
-    //     double psat1 = a.
-    // }
 }
 
 // Helper function which returns the psat of a component modeled by a1 or a2
@@ -149,8 +128,14 @@ double ModifiedRaoultModel::find_T(double x1)
     return output[1];
 }
 
-// Requires: `num_points` is no less than 2, `x_data` and `y_data` are empty
-void ModifiedRaoultModel::generate_yx_data(std::vector<double> &x_data, std::vector<double> &y_data, int num_points)
+void ModifiedRaoultModel::find_Ty(double x1, double &y1, double &T)
+{
+    T = find_T(x1);
+    y1 = x1 * b.gamma1(x1, T, t_unit) * psat_helper(a1, T) / P;
+}
+
+// Requires: `num_points` is at least 2, `x_data` and `y_data` are empty
+void ModifiedRaoultModel::generate_Txy_data(int num_points, std::vector<double> &x_data, std::vector<double> &y_data, std::vector<double> &t_data)
 {
     if (num_points < 2)
     {
@@ -167,16 +152,29 @@ void ModifiedRaoultModel::generate_yx_data(std::vector<double> &x_data, std::vec
     x_data.reserve(num_points);
     y_data.reserve(num_points);
     double step_size = 1. / (num_points - 1);
-    ofstream output_file;
-    output_file.open("out.csv");
+    double x1, y1, T;
     for (int i = 0; i < num_points; i++)
     {
-        double x1 = i * step_size;
-        double T = find_T(x1);
-        double y1 = x1 * b.gamma1(x1, T, t_unit) * psat_helper(a1, T) / P;
-        output_file << x1 << ',' << T << ',' << y1 << '\n';
+        x1 = i * step_size;
+        find_Ty(x1, y1, T);
         x_data.emplace_back(x1);
         y_data.emplace_back(y1);
+    }
+}
+
+void ModifiedRaoultModel::write_Txy_data(int num_points, ostream &o)
+{
+    if (num_points < 2)
+    {
+        throw "`write_Txy_data` was called with `num_points` < 2.\n";
+    }
+    double step_size = 1. / (num_points - 1);
+    double x1, y1, T;
+    for (int i = 0; i < num_points; i++)
+    {
+        x1 = i * step_size;
+        find_Ty(x1, y1, T);
+        o << x1 << ", " << y1 << ", " << T << '\n';
     }
 }
 
@@ -196,10 +194,14 @@ int main()
     // double psat2 = a2.psat(convert_T(363.15, m.t_unit, a2.t_unit), m.p_unit);
     // double xd = m.P - 0.060362514 * m.b.gamma1(0.060362514, 363.15, m.t_unit) * psat1 -
     //             (1 - 0.060362514) * m.b.gamma2(1 - 0.060362514, 363.15, m.t_unit) * psat2;
-    std::vector<double> x_data;
-    std::vector<double> y_data;
+    // std::vector<double> x_data;
+    // std::vector<double> y_data;
+    // std::vector<double> t_data;
 
-    m.generate_yx_data(x_data, y_data, 101);
+    ofstream output_file;
+    output_file.open("out.csv");
+
+    // m.generate_Txy_data(101, x_data, y_data, t_data);
     // for (double d : x_data)
     // {
     //     output_file << d << ',';
@@ -209,5 +211,7 @@ int main()
     // {
     //     output_file << d << ',';
     // }
+    m.write_Txy_data(101, output_file);
+    // Gnuplot gp;
     return 0;
 }

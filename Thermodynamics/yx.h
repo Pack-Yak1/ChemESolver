@@ -1,6 +1,7 @@
 #include "antoine.h"
 #include "wilson.h"
 #include "vector"
+using namespace std;
 
 #ifndef yx
 #define yx
@@ -34,10 +35,14 @@ public:
     // pressure and the value of `x1`.
     double find_T(double x1);
 
-    void generate_yx_data(std::vector<double> &x_data, std::vector<double> &y_data, int num_points);
+    void generate_Txy_data(int num_points, std::vector<double> &x_data, std::vector<double> &y_data, std::vector<double> &t_data);
+
+    void write_Txy_data(int num_points, ostream &o = cout);
 
 private:
     double psat_helper(AntoineModel a, double T);
+
+    void find_Ty(double x1, double &y1, double &T);
 };
 
 #endif
