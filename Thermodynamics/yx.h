@@ -1,12 +1,17 @@
 #include "antoine.h"
 #include "wilson.h"
 #include "vector"
+#include "../utils/point.h"
+#include "../utils/units.h"
+#include "gnuplot-iostream.h"
 using namespace std;
 
 #ifndef yx
 #define yx
 
-const int NUM_POINTS = 100;
+const double REL_XTOL = 1e-10;
+
+double f(const std::vector<double> &x, std::vector<double> &grad, void *f_data);
 
 class ModifiedRaoultModel
 {
@@ -17,6 +22,8 @@ public:
     T_unit t_unit;
     double P;
     P_unit p_unit;
+
+    ModifiedRaoultModel();
 
     // An instance of a ModifiedRaoultModel for a binary component system.
     // Relies on Antoine models for each component and a Wilson model for liquid
@@ -35,14 +42,17 @@ public:
     // pressure and the value of `x1`.
     double find_T(double x1);
 
-    void generate_Txy_data(int num_points, std::vector<double> &x_data, std::vector<double> &y_data, std::vector<double> &t_data);
+    // Sets the values of `T` in units of K and `y` to values consistent with
+    // this model's pressure and the value of `x1`
+    void find_Ty(double x1, double &y1, double &T);
 
-    void write_Txy_data(int num_points, ostream &o = cout);
+    void generate_Txy_data(int num_points, vector<Point> &Tx_data, vector<Point> &Ty_data);
 
-private:
+    void write_Txy_data(int num_points, ostream &o = cout, string delim = ",", string line_break = "\n");
+
     double psat_helper(AntoineModel a, double T);
 
-    void find_Ty(double x1, double &y1, double &T);
+    double tsat_helper(AntoineModel a, double P);
 };
 
 #endif
