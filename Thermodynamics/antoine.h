@@ -38,4 +38,12 @@ public:
     double tsat(double P, T_unit t);
 };
 
+const AntoineModel ANTOINE_WATER =
+    AntoineModel(
+        11.9647, 3984.93, -39.734, P_unit::bar, T_unit::K, log_type::LN);
+
+const AntoineModel ANTOINE_METHANOL =
+    AntoineModel(
+        11.9869, 3643.32, -33.434, P_unit::bar, T_unit::K, log_type::LN);
+
 #endif

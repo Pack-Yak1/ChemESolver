@@ -2,6 +2,7 @@
 #include "../Thermodynamics/wilson.h"
 #include "../Thermodynamics/yx.h"
 #include "../utils/units.h"
+#include "../utils/point.h"
 #include "mc_cabe_thiele.h"
 #include <nlopt.hpp>
 #include <vector>
@@ -17,24 +18,36 @@ MT::MT(ModifiedRaoultModel m, double xD, double xB, double xF, bool total_reflux
     this->total_reflux = total_reflux;
 }
 
-vector<double> MT::rectifying_line(double L, double D)
+vector<double> MT::rectifying_line(double R)
 {
-    double R = L / D;
     vector<double> output;
     output.reserve(2);
     output.emplace_back(R / (R + 1));
     output.emplace_back(xD / (R + 1));
+    // cout << output[0] << "," << output[1] << "\n";
+    return output;
+}
+
+vector<double> MT::rectifying_line(double L, double D)
+{
+    double R = L / D;
+    return rectifying_line(R);
+}
+
+vector<double> MT::stripping_line(double VB)
+{
+    vector<double> output;
+    output.reserve(2);
+    output.emplace_back((VB + 1) / VB);
+    output.emplace_back(-xB / VB);
+    // cout << output[0] << "," << output[1] << "\n";
     return output;
 }
 
 vector<double> MT::stripping_line(double Vbar, double B)
 {
     double VB = Vbar / B;
-    vector<double> output;
-    output.reserve(2);
-    output.emplace_back((VB + 1) / VB);
-    output.emplace_back(-xB / VB);
-    return output;
+    return stripping_line(VB);
 }
 
 // Assumes saturated liquid feed
@@ -115,23 +128,73 @@ double MT::min_reflux(double q)
     {
         std::cout << "nlopt failed: " << e.what() << std::endl;
     }
-    // cout << output[0] << ',' << output[1] << ',' << output[2] << '\n';
+    cout << output[0] << ',' << output[1] << ',' << output[2] << '\n';
     double gradient = Line(output[0], output[1], xD, xD).gradient();
     return -gradient / (gradient - 1);
 }
 
+vector<Point> MT::pseudo_equilibrium_curve(int num_points, double efficiency, vector<double> rect_line, vector<double> strip_line)
+{
+    Point intersection = Line::intersection(rect_line, strip_line);
+    vector<Point> Tx_data;
+    vector<Point> Ty_data;
+    m.generate_Txy_data(num_points, Tx_data, Ty_data, xB, xD);
+    vector<Point> output;
+    output.reserve(num_points);
+    double step_size = (xD - xB) / (num_points - 1);
+    for (int i = 0; i < num_points; i++)
+    {
+        double x = Tx_data[i].x;
+        double y = Ty_data[i].x;
+        double y_op;
+        if (total_reflux)
+        {
+            y_op = x;
+        }
+        else
+        {
+            if (x < intersection.x)
+            {
+                y_op = strip_line[0] * x + strip_line[1];
+            }
+            else
+            {
+                y_op = rect_line[0] * x + rect_line[1];
+            }
+        }
+        double y_out = (y - y_op) * efficiency + y_op;
+        output.emplace_back(x, y_out);
+    }
+    return output;
+    // cout << intersection << "\n";
+    // return p;
+}
+
+vector<Point> MT::pseudo_equilibrium_curve(int num_points, double efficiency,
+                                           double R, double VB)
+{
+    return pseudo_equilibrium_curve(
+        num_points, efficiency, rectifying_line(R), stripping_line(VB));
+}
+
 int main()
 {
-    AntoineModel a1(11.9869, 3643.32, -33.434, P_unit::bar, T_unit::K, log_type::LN);
-    AntoineModel a2(11.9647, 3984.93, -39.734, P_unit::bar, T_unit::K, log_type::LN);
-    BinaryWilsonModel b(0.00004073, 0.00001807, 347.4525, 2179.8398, 363.15, T_unit::K);
-    ModifiedRaoultModel m(a1, a2, b, T_unit::K, 99250, P_unit::Pa);
-    MT mt(m, 0.982359427, 0.001125985, 0.123287671, false);
-    cout << mt.min_reflux(1.121256386) << '\n';
+    // AntoineModel a1 = antoine::ANTOINE_METHANOL;
+    // AntoineModel a2 = antoine::ANTOINE_WATER;
+    // cout << a2.tsat(99250 / 1e5) << '\n';
+
+    // BinaryWilsonModel b(0.00004073, 0.00001807, 347.4525, 2179.8398, 363.15, T_unit::K);
+    // ModifiedRaoultModel m(a1, a2, b, T_unit::K, 99250, P_unit::Pa);
+    // MT mt(m, 0.91, 0.002895894, 0.123287671, false);
+    // cout << mt.min_reflux(1.121256386) << '\n';
+    // vector<Point> peq = mt.pseudo_equilibrium_curve(101, 0.1, 1.86805487, 0.829084445);
 
     // ofstream output_file;
-    // output_file.open("out.csv");
-    // mt.m.write_Txy_data(101, output_file);
-    // TODO: reflux funcs give gradient not R
+    // output_file.open("test_peq.csv");
+    // // mt.m.write_Txy_data(101, output_file);
+    // for (int i = 0; i < peq.size(); i++)
+    // {
+    //     output_file << peq[i].x << "," << peq[i].y << '\n';
+    // }
     return 0;
 }

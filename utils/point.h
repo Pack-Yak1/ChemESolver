@@ -1,5 +1,8 @@
 #include <iostream>
 #include <stdlib.h>
+#include <vector>
+
+using namespace std;
 
 #ifndef point
 #define point
@@ -46,6 +49,21 @@ public:
     double gradient()
     {
         return (y2 - y1) / (x2 - x1);
+    }
+
+    // Returns the point of intersection between the lines:
+    // y = `line1[0]` * x + `line1[1]` and
+    // y = `line2[0]` * x + `line2[1]`
+    static Point intersection(vector<double> line1, vector<double> line2)
+    {
+        double a1 = line1[0];
+        double b1 = -1;
+        double c1 = line1[1];
+        double a2 = line2[0];
+        double b2 = -1;
+        double c2 = line2[1];
+        return Point((b1 * c2 - b2 * c1) / (a1 * b2 - a2 * b1),
+                     (a2 * c1 - a1 * c2) / (a1 * b2 - a2 * b1));
     }
 };
 

@@ -40,17 +40,11 @@ ModifiedRaoultModel::
     this->p_unit = p_unit;
 }
 
-// Helper function which returns the psat of a component modeled by a1 or a2
-// in units of `this->p_unit`, which handles unit conversion of temperature from
-// `this->t_unit`.
 double ModifiedRaoultModel::psat_helper(AntoineModel a, double T)
 {
     return a.psat(convert_T(T, t_unit, a.t_unit), p_unit);
 }
 
-// Helper function which returns the tsat of a component modeled by a1 or a2
-// in units of `this->t_unit`, which handles unit conversion of pressire from
-// `this->p_unit`.
 double ModifiedRaoultModel::tsat_helper(AntoineModel a, double P)
 {
     return a.tsat(convert_P(P, p_unit, a.p_unit), t_unit);
@@ -160,13 +154,29 @@ void ModifiedRaoultModel::find_Ty(double x1, double &y1, double &T)
     y1 = x1 * b.gamma1(x1, T, t_unit) * psat_helper(a1, T) / P;
 }
 
-// Requires: `num_points` is at least 2, `x_data` and `y_data` are empty
-void ModifiedRaoultModel::generate_Txy_data(int num_points, vector<Point> &Tx_data, vector<Point> &Ty_data)
+// Throws exceptions parametrized on `fn_name` if num_points is less than 2,
+// or if start and end are not within [0, 1], or if start is greater than end.
+void check_bounds(int num_points, double start, double end, string fn_name)
 {
     if (num_points < 2)
     {
-        throw "`generate_yx_data` was called with `num_points` < 2.\n";
+        throw "`" + fn_name + "` was called with `num_points` < 2.\n";
     }
+    if (start < 0 || end > 1)
+    {
+        throw "`" + fn_name + "` was called with `start` < 0 or `end` > 1.\n";
+    }
+    if (start > end)
+    {
+        throw "`" + fn_name + "` was called with `start` > `end`.\n";
+    }
+}
+
+void ModifiedRaoultModel::
+    generate_Txy_data(int num_points, vector<Point> &Tx_data,
+                      vector<Point> &Ty_data, double start, double end)
+{
+    check_bounds(num_points, start, end, "generate_Txy_data");
     if (!Tx_data.empty())
     {
         throw "`generate_yx_data` was called with nonempty `Tx_data`.\n";
@@ -177,23 +187,23 @@ void ModifiedRaoultModel::generate_Txy_data(int num_points, vector<Point> &Tx_da
     }
     Tx_data.reserve(num_points);
     Ty_data.reserve(num_points);
-    double step_size = 1. / (num_points - 1);
+    double step_size = (end - start) / (num_points - 1);
     double x1, y1, T;
     for (int i = 0; i < num_points; i++)
     {
-        x1 = i * step_size;
+        x1 = i * step_size + start;
         find_Ty(x1, y1, T);
         Tx_data.emplace_back(x1, T);
         Ty_data.emplace_back(y1, T);
     }
 }
 
-void ModifiedRaoultModel::write_Txy_data(int num_points, ostream &o, string delim, string line_break)
+void ModifiedRaoultModel::write_Txy_data(int num_points, ostream &o,
+                                         string delim, string line_break,
+                                         double start, double end)
 {
-    if (num_points < 2)
-    {
-        throw "`write_Txy_data` was called with `num_points` < 2.\n";
-    }
+    check_bounds(num_points, start, end, "write_Txy_data");
+
     double step_size = 1. / (num_points - 1);
     double x1, y1, T;
     for (int i = 0; i < num_points; i++)
