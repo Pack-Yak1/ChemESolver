@@ -65,6 +65,24 @@ public:
     // `this->xB` to `this->xD` with size `num_points` for the given
     // `efficiency`. `R` is the reflux ratio. `VB` is the boilup ratio.
     vector<Point> pseudo_equilibrium_curve(int num_points, double efficiency, double R, double VB);
+
+    // Returns the number of stages needed for a distillation column under
+    // total reflux to separate feed with mole fraction `this->xF` to bottoms
+    // with `this->xB` and distillate with `this->xD`. If `verbose` is true,
+    // the equilibrium stage mole fractions will be written to `o` with
+    // `delim` between mole fractions and `line_break` between each stage.
+    int stage_count(bool verbose = false, ostream &o = cout, string delim = ",",
+                    string line_break = "\n");
+
+    // Returns the number of stages needed for a distillation column with
+    // rectifying and stripping lines described by `rect_line` and `strip_line`
+    // to separate feed with mole fraction `this->xF` to bottoms with
+    // `this->xB` and distillate with `this->xD`. If `verbose` is true, the
+    // equilibrium stage mole fractions will be written to `o` with `delim`
+    // between mole fractions and `line_break` between each stage.
+    int stage_count(vector<double> rect_line, vector<double> strip_line,
+                    bool verbose = false, ostream &o = cout, string delim = ",",
+                    string line_break = "\n");
 };
 
 #endif

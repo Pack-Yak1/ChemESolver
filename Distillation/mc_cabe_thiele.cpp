@@ -55,9 +55,9 @@ double MT::min_reflux()
 {
     double yF = xF;
     double T = 300;
-    m.find_Ty(xF, yF, T);
+    m.set_Ty(xF, yF, T);
     // cout << xF << ',' << yF << ',' << T << '\n';
-    double gradient = Line(xF, yF, xD, xD).gradient();
+    double gradient = Line(xF, yF, xD, xD).gradient;
     return -gradient / (gradient - 1);
 }
 
@@ -109,7 +109,7 @@ double MT::min_reflux(double q)
     upper_bounds[1] = 1;
     upper_bounds[2] = max(boiling_point_1, boiling_point_2);
     opt.set_upper_bounds(upper_bounds);
-    opt.set_min_objective(yx::f, f_data);
+    opt.set_min_objective(yx::p_error, f_data);
     opt.add_equality_constraint(q_line_constraint, &constraint_data, 1e-8);
     opt.add_equality_constraint(y_constraint, &m, 1e-8);
     opt.set_xtol_rel(yx::REL_XTOL);
@@ -128,8 +128,8 @@ double MT::min_reflux(double q)
     {
         std::cout << "nlopt failed: " << e.what() << std::endl;
     }
-    cout << output[0] << ',' << output[1] << ',' << output[2] << '\n';
-    double gradient = Line(output[0], output[1], xD, xD).gradient();
+    // cout << output[0] << ',' << output[1] << ',' << output[2] << '\n';
+    double gradient = Line(output[0], output[1], xD, xD).gradient;
     return -gradient / (gradient - 1);
 }
 
@@ -177,24 +177,101 @@ vector<Point> MT::pseudo_equilibrium_curve(int num_points, double efficiency,
         num_points, efficiency, rectifying_line(R), stripping_line(VB));
 }
 
+// For total reflux
+int MT::stage_count(bool verbose, ostream &o, string delim, string line_break)
+{
+    double x = xD;
+    double y = xD;
+    double T;
+    int stage_count = 0;
+    o << "Tray Number" << delim << "x" << delim << "y" << line_break;
+    while (x > xB)
+    {
+        m.set_Tx(x, y, T);
+        stage_count++;
+        if (verbose)
+        {
+            o << stage_count << delim << x << delim << y << line_break;
+        }
+        y = x;
+    }
+    return stage_count;
+}
+
+int MT::stage_count(vector<double> rect_line, vector<double> strip_line,
+                    bool verbose, ostream &o, string delim, string line_break)
+{
+    double x = xD;
+    double y = xD;
+    double T;
+    int stage_count = 0;
+    o << "Tray Number" << delim << "x" << delim << "y" << line_break;
+    Point intersection = Line::intersection(rect_line, strip_line);
+    while (x > xB)
+    {
+        m.set_Tx(x, y, T);
+        // printf("stage count: %d, x: %f, y: %f, T: %f\n", stage_count, x, y, T);
+        stage_count++;
+        if (verbose)
+        {
+            o << stage_count << delim << x << delim << y << line_break;
+        }
+        vector<double> *op_line = x > intersection.x ? &rect_line : &strip_line;
+        y = (*op_line)[0] * x + (*op_line)[1];
+        // if (verbose)
+        // {
+        //     o << stage_count << delim << x << delim << y << line_break;
+        // }
+    }
+    return stage_count;
+}
+
 int main()
 {
-    // AntoineModel a1 = antoine::ANTOINE_METHANOL;
-    // AntoineModel a2 = antoine::ANTOINE_WATER;
-    // cout << a2.tsat(99250 / 1e5) << '\n';
+    // TODO: add gui
+    // TODO: use references to pass args
+    // TODO: consider making lower level solver methods private
+    AntoineModel a1 = antoine::ANTOINE_METHANOL;
+    AntoineModel a2 = antoine::ANTOINE_WATER;
 
-    // BinaryWilsonModel b(0.00004073, 0.00001807, 347.4525, 2179.8398, 363.15, T_unit::K);
-    // ModifiedRaoultModel m(a1, a2, b, T_unit::K, 99250, P_unit::Pa);
-    // MT mt(m, 0.91, 0.002895894, 0.123287671, false);
-    // cout << mt.min_reflux(1.121256386) << '\n';
+    BinaryWilsonModel b(0.00004073, 0.00001807, 347.4525, 2179.8398, 363.15, T_unit::K);
+    ModifiedRaoultModel m(a1, a2, b, T_unit::K, 99250, P_unit::Pa);
+    MT mt(m, 0.98, 0.02, 0.2, false);
+
     // vector<Point> peq = mt.pseudo_equilibrium_curve(101, 0.1, 1.86805487, 0.829084445);
+    // vector<double> v;
+    // v.reserve(2);
+    // v.emplace_back(1);
+    // v.emplace_back(0);
 
-    // ofstream output_file;
-    // output_file.open("test_peq.csv");
-    // // mt.m.write_Txy_data(101, output_file);
+    // vector<Point> peq = mt.pseudo_equilibrium_curve(101, 0.1, v, v);
+
+    ofstream output_file;
+    output_file.open("gg.csv");
+    // mt.m.write_Txy_data(1001, output_file);
+    // mt.m.write_Txy_data(101, output_file);
+
     // for (int i = 0; i < peq.size(); i++)
     // {
-    //     output_file << peq[i].x << "," << peq[i].y << '\n';
+    //     cout << peq[i].x << "," << peq[i].y << '\n';
     // }
+
+    // double x = .8;
+    // double y = .91;
+    // double T = 358;
+    // mt.m.set_xy(x, y, T);
+    // printf("x: %f, y: %f, T: %f\n", x, y, T);
+    // cout << mt.m.solve_from_y1(.78) << '\n';
+    // cout << mt.m.find_T(.78, false) << '\n';
+    // cout << mt.m.find_T(0.4859, true) << '\n';
+    cout << mt.stage_count(mt.rectifying_line(1.04027 * 1.3), mt.stripping_line(0.542850835), true, output_file) << '\n';
+
+    // Line l1 = Line(0, 0, 1, 1);
+    // Line l2 = Line(0, 0, 1, 1);
+    // cout << Line::intersection(l1, l2);
+
+    // vector<double> rect = mt.rectifying_line(mt.min_reflux() * 1);
+    // cout << rect[0] << ',' << rect[1];
+
     return 0;
 }

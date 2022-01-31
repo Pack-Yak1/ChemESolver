@@ -11,7 +11,8 @@ using namespace std;
 
 const double REL_XTOL = 1e-10;
 
-double f(const std::vector<double> &x, std::vector<double> &grad, void *f_data);
+double p_error(const std::vector<double> &x, std::vector<double> &grad, void *f_data);
+double x_error(const std::vector<double> &x, std::vector<double> &grad, void *f_data);
 
 class ModifiedRaoultModel
 {
@@ -31,21 +32,34 @@ public:
     ModifiedRaoultModel(AntoineModel a1, AntoineModel a2, BinaryWilsonModel b,
                         T_unit t_unit, double P, P_unit p_unit);
 
-    // Finds a value of mole fraction of component 1 which satisfies the modified
-    // Raoult model for temperature `T` in K.
-    double find_x1(double T);
+    // Finds mole fractions in liquid and vapor phase consistent with `T` in K.
+    // Returns a vector with first element = x1, second = y1, third = T.
+    vector<double> solve_from_T(double T);
 
-    // Finds a value of mole fraction of component 1 which satisfies the modified
-    // Raoult model for temperature `T` in units of `t_unit`.
-    double find_x1(double T, T_unit t_unit);
+    // Finds mole fractions in liquid and vapor phase consistent with `T` in
+    // units of `t_unit`.
+    // Returns a vector with first element = x1, second = y1, third = T.
+    vector<double> solve_from_T(double T, T_unit t_unit);
 
-    // Finds a value of `T` in units of K that is consistent with this model's
-    // pressure and the value of `x1`.
-    double find_T(double x1);
+    // Finds mole fraction in liquid phase and temperature consistent with `y1`.
+    // Returns a vector with first element = x1, second = y1, third = T.
+    vector<double> solve_from_y1(double y1);
 
-    // Sets the values of `T` in units of K and `y` to values consistent with
+    // Finds mole fraction in vapor phase and temperature consistent with `x1`.
+    // Returns a vector with first element = x1, second = y1, third = T.
+    vector<double> solve_from_x1(double x1);
+
+    // Sets the values of `T` in units of K and `y1` to values consistent with
     // this model's pressure and the value of `x1`
-    void find_Ty(double x1, double &y1, double &T);
+    void set_Ty(double x1, double &y1, double &T);
+
+    // Sets the values of `T` in units of K and `x1` to values consistent with
+    // this model's pressure and the value of `y1`
+    void set_Tx(double &x1, double y1, double &T);
+
+    // Sets the values of `x1` and `y1` to values consistent with
+    // this model's pressure and the value of `T` in `K`.
+    void set_xy(double &x1, double &y1, double T);
 
     // Populates `Tx_data` and `Ty_data` with points, where the x value of each
     // point is mole fraction in corresponding liquid/vapor phases, and the y

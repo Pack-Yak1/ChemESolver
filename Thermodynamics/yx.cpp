@@ -54,7 +54,7 @@ double ModifiedRaoultModel::tsat_helper(AntoineModel a, double P)
 // Returns the squared error of `f_data`'s pressure and the value predicted
 // given `x[0]` = liquid mole fraction of component 1
 // and `x[2]` = temperature.
-double f(const std::vector<double> &x, std::vector<double> &grad, void *f_data)
+double p_error(const std::vector<double> &x, std::vector<double> &grad, void *f_data)
 {
     ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
     double psat1 = m->psat_helper(m->a1, x[2]);
@@ -63,15 +63,31 @@ double f(const std::vector<double> &x, std::vector<double> &grad, void *f_data)
     double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
     double p1 = x[0] * gamma1 * psat1;
     double p2 = (1 - x[0]) * gamma2 * psat2;
-    double T_err = pow(m->P - p1 - p2, 2);
-    return T_err;
+    return pow(m->P - p1 - p2, 2);
+}
+
+double x_error(const std::vector<double> &x, std::vector<double> &grad, void *f_data)
+{
+    ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
+    double psat1 = m->psat_helper(m->a1, x[2]);
+    double psat2 = m->psat_helper(m->a2, x[2]);
+    double gamma1 = m->b.gamma1(x[0], x[2], m->t_unit);
+    double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
+    double p1 = x[0] * gamma1 * psat1;
+    double p2 = (1 - x[0]) * gamma2 * psat2;
+    // double x1 = x[1] * m->P / gamma1 / psat1;
+    // double x2 = (1 - x[1]) * m->P / gamma2 / psat2;
+    // cout << x[0] << ',' << x[1] << ',' << x[2] << '\n';
+
+    return pow(x[1] - p1 / m->P, 2) + pow((1 - x[1]) - p2 / m->P, 2);
 }
 
 // Finds a value of mole fraction of component 1 which satisfies the modified
 // Raoult model for temperature `T` in K.
-double ModifiedRaoultModel::find_x1(double T)
+vector<double> ModifiedRaoultModel::solve_from_T(double T)
 {
-    // x_0 refers to mole fraction of component 1, x_1 is temperature
+    // x_0 refers to mole fraction of component 1, x_1 is vapor, x_2 is
+    // temperature
     nlopt::opt opt(nlopt::LN_COBYLA, 3);
     std::vector<double> lower_bounds(3);
     std::vector<double> upper_bounds(3);
@@ -84,7 +100,7 @@ double ModifiedRaoultModel::find_x1(double T)
     upper_bounds[1] = 1;
     upper_bounds[2] = T;
     opt.set_upper_bounds(upper_bounds);
-    opt.set_min_objective(f, f_data);
+    opt.set_min_objective(x_error, f_data);
     opt.set_xtol_rel(REL_XTOL);
     std::vector<double> output(3);
     output[0] = 0.5;
@@ -102,17 +118,53 @@ double ModifiedRaoultModel::find_x1(double T)
     {
         std::cout << "nlopt failed: " << e.what() << std::endl;
     }
-    return output[0];
+    return output;
 }
 
 // Finds a value of mole fraction of component 1 which satisfies the modified
 // Raoult model for temperature `T` in units of `t_unit`.
-double ModifiedRaoultModel::find_x1(double T, T_unit t_unit)
+vector<double> ModifiedRaoultModel::solve_from_T(double T, T_unit t_unit)
 {
-    return find_x1(convert_T(T, t_unit, T_unit::K));
+    return solve_from_T(convert_T(T, t_unit, T_unit::K));
 }
 
-double ModifiedRaoultModel::find_T(double x1)
+vector<double> ModifiedRaoultModel::solve_from_y1(double y1)
+{
+    nlopt::opt opt(nlopt::LN_COBYLA, 3);
+    std::vector<double> lower_bounds(3);
+    std::vector<double> upper_bounds(3);
+    ModifiedRaoultModel *f_data = this;
+    lower_bounds[0] = 0;
+    lower_bounds[1] = y1;
+    lower_bounds[2] = 0;
+    opt.set_lower_bounds(lower_bounds);
+    upper_bounds[0] = 1;
+    upper_bounds[1] = y1;
+    upper_bounds[2] = HUGE_VAL;
+    opt.set_upper_bounds(upper_bounds);
+    opt.set_min_objective(x_error, f_data);
+    // opt.add_equality_constraint(y_constraint, &f_data, 1e-8);
+    opt.set_xtol_rel(REL_XTOL);
+    std::vector<double> output(3);
+    output[0] = 0.5;
+    output[1] = y1;
+    output[2] = 300;
+    double min_f_val;
+
+    try
+    {
+        nlopt::result result = opt.optimize(output, min_f_val);
+        // std::cout << "found minimum at f(" << output[0] << "," << output[1] << "," << output[2] << ") = "
+        //           << std::setprecision(10) << min_f_val << std::endl;
+    }
+    catch (std::exception &e)
+    {
+        std::cout << "nlopt failed: " << e.what() << std::endl;
+    }
+    return output;
+}
+
+vector<double> ModifiedRaoultModel::solve_from_x1(double x1)
 {
     // x_0, x_1 is liq, vap mole fraction, x_2 is T
     nlopt::opt opt(nlopt::LN_COBYLA, 3);
@@ -127,7 +179,7 @@ double ModifiedRaoultModel::find_T(double x1)
     upper_bounds[1] = 1;
     upper_bounds[2] = HUGE_VAL;
     opt.set_upper_bounds(upper_bounds);
-    opt.set_min_objective(f, f_data);
+    opt.set_min_objective(p_error, f_data);
     opt.set_xtol_rel(REL_XTOL);
     std::vector<double> output(3);
     output[0] = x1;
@@ -138,20 +190,39 @@ double ModifiedRaoultModel::find_T(double x1)
     try
     {
         nlopt::result result = opt.optimize(output, min_f_val);
-        // std::cout << "found minimum at f(" << output[0] << "," << output[1] << ") = "
+        // std::cout << "found minimum at f(" << output[0] << "," << output[1] << "," << output[2] << ") = "
         //           << std::setprecision(10) << min_f_val << std::endl;
     }
     catch (std::exception &e)
     {
         std::cout << "nlopt failed: " << e.what() << std::endl;
     }
-    return output[2];
+    double psat1 = psat_helper(a1, output[2]);
+    double gamma1 = b.gamma1(output[0], output[2], t_unit);
+    double p1 = output[0] * gamma1 * psat1;
+    output[1] = p1 / P;
+    return output;
 }
 
-void ModifiedRaoultModel::find_Ty(double x1, double &y1, double &T)
+void ModifiedRaoultModel::set_Ty(double x1, double &y1, double &T)
 {
-    T = find_T(x1);
-    y1 = x1 * b.gamma1(x1, T, t_unit) * psat_helper(a1, T) / P;
+    vector<double> answer = solve_from_x1(x1);
+    y1 = answer[1];
+    T = answer[2];
+}
+
+void ModifiedRaoultModel::set_Tx(double &x1, double y1, double &T)
+{
+    vector<double> answer = solve_from_y1(y1);
+    x1 = answer[0];
+    T = answer[2];
+}
+
+void ModifiedRaoultModel::set_xy(double &x1, double &y1, double T)
+{
+    vector<double> answer = solve_from_T(T);
+    x1 = answer[0];
+    y1 = answer[1];
 }
 
 // Throws exceptions parametrized on `fn_name` if num_points is less than 2,
@@ -192,7 +263,7 @@ void ModifiedRaoultModel::
     for (int i = 0; i < num_points; i++)
     {
         x1 = i * step_size + start;
-        find_Ty(x1, y1, T);
+        set_Ty(x1, y1, T);
         Tx_data.emplace_back(x1, T);
         Ty_data.emplace_back(y1, T);
     }
@@ -209,7 +280,7 @@ void ModifiedRaoultModel::write_Txy_data(int num_points, ostream &o,
     for (int i = 0; i < num_points; i++)
     {
         x1 = i * step_size;
-        find_Ty(x1, y1, T);
+        set_Ty(x1, y1, T);
         o << x1 << delim << y1 << delim << T << line_break;
     }
 }
