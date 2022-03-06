@@ -12,7 +12,8 @@ enum P_unit
 {
     Pa,
     bar,
-    psi
+    psi,
+    mmHg
 };
 
 double convert_T(double T, T_unit initial, T_unit final);

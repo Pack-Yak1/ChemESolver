@@ -38,11 +38,49 @@ double convert_P(double P, P_unit initial, P_unit final)
     switch (initial)
     {
     case Pa:
-        return final == bar ? P / pow(10, 5) : P / 6895;
+        switch (final)
+        {
+        case bar:
+            return P / pow(10, 5);
+        case psi:
+            return P / 6895;
+        case mmHg:
+            return P / 133;
+        }
+        break;
     case bar:
-        return final == Pa ? P * pow(10, 5) : P * 14.5038;
+        switch (final)
+        {
+        case Pa:
+            return P * pow(10, 5);
+        case psi:
+            return P * 14.5038;
+        case mmHg:
+            return P * 750;
+        }
+        break;
     case psi:
-        return final == Pa ? P * 6895 : P / 14.5038;
+        switch (final)
+        {
+        case Pa:
+            return P * 6895;
+        case bar:
+            return P / 14.5038;
+        case mmHg:
+            return P * 51.715;
+        }
+        break;
+    case mmHg:
+        switch (final)
+        {
+        case Pa:
+            return P * 133;
+        case bar:
+            return P / 750;
+        case psi:
+            return P / 51.715;
+        }
+        break;
     default:
         throw "Unrecognized unit of pressure.\n";
     }

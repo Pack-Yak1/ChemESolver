@@ -2,7 +2,7 @@
 #include <iostream>
 #include <math.h>
 #include "../utils/units.h"
-#include "../utils/point.h"
+#include "../utils/coords.h"
 #include "wilson.h"
 #include "antoine.h"
 #include "yx.h"
@@ -287,9 +287,9 @@ void ModifiedRaoultModel::write_Txy_data(int num_points, ostream &o,
 
 // int main()
 // {
-//     AntoineModel a1(11.9869, 3643.32, -33.434, P_unit::bar, T_unit::K, log_type::LN);
+//     AntoineModel a1 = ANTOINE_METHANOL;
 //     // std::cout << a1.tsat(329283.8093 / 100000) << '\n';
-//     AntoineModel a2(11.9647, 3984.93, -39.734, P_unit::bar, T_unit::K, log_type::LN);
+//     AntoineModel a2 = ANTOINE_WATER;
 //     BinaryWilsonModel b(0.00004073, 0.00001807, 347.4525, 2179.8398, 363.15, T_unit::K);
 //     // ModifiedRaoultModel d(a, b);
 //     // b.setT(339.261, T_unit::K);

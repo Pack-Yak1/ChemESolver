@@ -1,7 +1,7 @@
 #include "antoine.h"
 #include "wilson.h"
 #include "vector"
-#include "../utils/point.h"
+#include "../utils/coords.h"
 #include "../utils/units.h"
 #include "gnuplot-iostream.h"
 using namespace std;
