@@ -17,13 +17,20 @@ class opt
 private:
     opt_func_t f;
     unsigned int d;
+    vector<vector<double>> points;
 
-    void sort_by_opt_function(vector<vector<double>> &points);
-    vector<double> get_centroid(const vector<vector<double>> &points);
-    double reflect(vector<vector<double>> &points, const vector<double> &centroid, double f_1, double f_n);
-
+    void sort_by_opt_function();
+    vector<double> get_centroid();
+    vector<double> reflect(const vector<double> &centroid, double f_1, double f_n, double &f_r);
+    void expand(const vector<double> &centroid, const vector<double> &x_r, double f_r);
+    vector<double> outside_contract(const vector<double> &centroid, const vector<double> &x_r);
+    void inside_contract(const vector<double> &centroid, const vector<double> &x_r, double f_n1);
+    void shrink(const vector<double> &x1);
+    
 public:
     opt(opt_func_t f, unsigned int d);
+    void set_polytope(vector<vector<double>> &points);
+    void step();
 };
 
 #endif
