@@ -10,7 +10,7 @@ using namespace std;
 
 static const double ALPHA = 1, BETA = 2, GAMMA = 0.5, DELTA = 0.5;
 
-typedef double (*opt_func_t)(const vector<double> &x);
+typedef double (*opt_func_t)(const vector<double> &x, void *context);
 
 class opt
 {
@@ -18,6 +18,7 @@ private:
     opt_func_t f;
     unsigned int d;
     vector<vector<double>> points;
+    void *context;
 
     void sort_by_opt_function();
     vector<double> get_centroid();
@@ -26,9 +27,9 @@ private:
     vector<double> outside_contract(const vector<double> &centroid, const vector<double> &x_r);
     void inside_contract(const vector<double> &centroid, const vector<double> &x_r, double f_n1);
     void shrink(const vector<double> &x1);
-    
+
 public:
-    opt(opt_func_t f, unsigned int d);
+    opt(opt_func_t f, void *context, unsigned int d);
     void set_polytope(vector<vector<double>> &points);
     void step();
 };

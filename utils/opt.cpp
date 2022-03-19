@@ -5,13 +5,15 @@
 #include <algorithm>
 #include <vector>
 #include "opt.h"
+#include "../Thermodynamics/yx.h"
 
 using namespace std;
 
-opt::opt(opt_func_t f, unsigned int d)
+opt::opt(opt_func_t f, void *context, unsigned int d)
 {
     this->f = f;
     this->d = d;
+    this->context = context;
 }
 
 void opt::set_polytope(vector<vector<double>> &points)
@@ -32,7 +34,7 @@ void opt::sort_by_opt_function()
         {
             throw "`sort_by_opt_function` given `points` argument containing vector of incorrect dimensions.";
         }
-        double cmp = f(p1) - f(p2);
+        double cmp = f(p1, context) - f(p2, context);
         if (cmp == 0)
         {
             // Consistent tie break needed for Nelder-Meads
@@ -87,7 +89,7 @@ vector<double> opt::reflect(const vector<double> &centroid, double f_1, double f
     {
         x_r[dim] = centroid[dim] * (1 + ALPHA) - ALPHA * last[dim];
     }
-    f_r = f(x_r);
+    f_r = f(x_r, context);
     if (f_r >= f_1 && f_r < f_n)
     {
         points[points.size() - 1] = x_r;
@@ -102,7 +104,7 @@ void opt::expand(const vector<double> &centroid, const vector<double> &x_r, doub
     {
         x_e[dim] = centroid[dim] * (1 - BETA) + BETA * x_r[dim];
     }
-    double f_e = f(x_e);
+    double f_e = f(x_e, context);
     points[points.size() - 1] = f_e < f_r ? x_e : x_r;
 }
 
@@ -123,7 +125,7 @@ void opt::inside_contract(const vector<double> &centroid, const vector<double> &
     {
         x_ic[dim] = centroid[dim] * (1 + GAMMA) - GAMMA * x_r[dim];
     }
-    double f_ic = f(x_ic);
+    double f_ic = f(x_ic, context);
     if (f_ic < f_n1)
     {
         points[points.size() - 1] = x_ic;
@@ -143,16 +145,16 @@ void opt::shrink(const vector<double> &x_1)
 }
 
 // Test function
-double fun(const vector<double> &x)
+double fun(const vector<double> &x, void *ctx)
 {
     return -pow((x[0] - 3), 2);
 }
 
 void opt::step()
 {
-    double f_1 = f(points[0]);
-    double f_n = f(points[points.size() - 2]);
-    double f_n1 = f(points[points.size() - 1]);
+    double f_1 = f(points[0], context);
+    double f_n = f(points[points.size() - 2], context);
+    double f_n1 = f(points[points.size() - 1], context);
     vector<double> centroid = get_centroid();
 
     // Step 1
@@ -173,7 +175,7 @@ void opt::step()
     if (f_n <= f_r && f_r < f_n1)
     {
         x_oc = outside_contract(centroid, x_r);
-        double f_oc = f(x_oc);
+        double f_oc = f(x_oc, context);
         if (f_oc > f_r)
         {
             // Skip to step 6
@@ -196,11 +198,41 @@ void opt::step()
     shrink(points[0]);
 }
 
+// Optimization function. `f_data` is an instance of ModifiedRaoultModel.
+// Returns the squared error of `f_data`'s pressure and the value predicted
+// given `x[0]` = liquid mole fraction of component 1
+// and `x[2]` = temperature.
+double p_error(const std::vector<double> &x, void *f_data)
+{
+    ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
+    double psat1 = m->psat_helper(m->a1, x[2]);
+    double psat2 = m->psat_helper(m->a2, x[2]);
+    double gamma1 = m->b.gamma1(x[0], x[2], m->t_unit);
+    double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
+    double p1 = x[0] * gamma1 * psat1;
+    double p2 = (1 - x[0]) * gamma2 * psat2;
+    return pow(m->P - p1 - p2, 2);
+}
 
+// double x_error(const std::vector<double> &x, std::vector<double> &grad, void *f_data)
+// {
+//     ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
+//     double psat1 = m->psat_helper(m->a1, x[2]);
+//     double psat2 = m->psat_helper(m->a2, x[2]);
+//     double gamma1 = m->b.gamma1(x[0], x[2], m->t_unit);
+//     double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
+//     double p1 = x[0] * gamma1 * psat1;
+//     double p2 = (1 - x[0]) * gamma2 * psat2;
+//     // double x1 = x[1] * m->P / gamma1 / psat1;
+//     // double x2 = (1 - x[1]) * m->P / gamma2 / psat2;
+//     // cout << x[0] << ',' << x[1] << ',' << x[2] << '\n';
+
+//     return pow(x[1] - p1 / m->P, 2) + pow((1 - x[1]) - p2 / m->P, 2);
+// }
 
 int main()
 {
-    opt o(fun, 1);
+    opt o(fun, NULL, 1);
     vector<vector<double>> v;
     for (int i = 0; i < 10; i++)
     {
