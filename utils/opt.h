@@ -9,9 +9,9 @@ using namespace std;
 #ifndef opt_h
 #define opt_h
 
-#define STDDEV_TOL 0.001
+#define STDDEV_TOL 1e-10
 
-static const double ALPHA = 0.1, BETA = 1.1, GAMMA = .1, DELTA = 0.1;
+static const double ALPHA = 0.5, BETA = 2, GAMMA = .5, DELTA = 0.5;
 
 typedef double (*opt_func_t)(const vector<double> &x, void *context);
 

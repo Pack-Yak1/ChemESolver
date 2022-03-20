@@ -18,4 +18,4 @@ opt: utils/opt.o utils/vector_ops.o Distillation/mc_cabe_thiele.o Thermodynamics
 	utils/opt
 
 clean:
-	rm -f Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o
+	rm -f Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/point.o utils/opt.o utils/coords.o utils/vector_ops.o */*.csv *.csv */*.dat *.dat

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <iostream>
 #include <math.h>
@@ -84,6 +85,7 @@ double convert_P(double P, P_unit initial, P_unit final)
     default:
         throw "Unrecognized unit of pressure.\n";
     }
+    assert(0);
 }
 
 // int main()

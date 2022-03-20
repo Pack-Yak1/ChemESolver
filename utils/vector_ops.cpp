@@ -7,7 +7,40 @@
 
 using namespace std;
 
-vector<double> sum(vector<double> v1, vector<double> v2)
+void multiply_in_place(double c, vector<double> &v)
+{
+    int d = v.size();
+    for (vector<double>::iterator i = v.begin(); i != v.end(); i++)
+    {
+        *i *= c;
+    }
+}
+
+vector<double> multiply(double c, const vector<double> &v)
+{
+    int d = v.size();
+    vector<double> output = v;
+    for (vector<double>::iterator i = output.begin(); i != output.end(); i++)
+    {
+        *i *= c;
+    }
+    return output;
+}
+
+void sum_in_place(vector<double> &v1, const vector<double> &v2)
+{
+    if (v1.size() != v2.size())
+    {
+        throw DIMENSION_ERROR;
+    }
+    int d = v1.size();
+    for (int dim = 0; dim < v1.size(); dim++)
+    {
+        v1[dim] += v2[dim];
+    }
+}
+
+vector<double> sum(const vector<double> &v1, const vector<double> &v2)
 {
     if (v1.size() != v2.size())
     {
@@ -44,15 +77,6 @@ vector<double> sum(const vector<vector<double>> &vecs)
     return output;
 }
 
-/**
- * @brief Returns a vector of linearly spaced points
- *
- * @param start The lower bound for the linear space, inclusive
- * @param end The upper bound for the linear space, inclusive
- * @param points The number of points in the resulting linear space
- * @return vector<double> A linear space of doubles starting at `start`, ending
- * at `end`, with `points` points.
- */
 vector<double> linspace(double start, double end, double points)
 {
     if (points <= 0)
@@ -69,14 +93,7 @@ vector<double> linspace(double start, double end, double points)
     return output;
 }
 
-/**
- * @brief Similar to numpy meshgrid. Given n linspaces, return a vector of n-
- * dimensional vectors v_i spanning the cartesian product of linspaces
- *
- * @param linspaces A vector of linspaces which the resulting grid must span
- * @return vector<vector<double>> The resulting meshgrid
- */
-vector<vector<double>> zip(vector<vector<double>> linspaces)
+vector<vector<double>> zip(const vector<vector<double>> &linspaces)
 {
     int num_dimensions = linspaces.size();
     if (num_dimensions == 0)
@@ -108,6 +125,27 @@ vector<vector<double>> zip(vector<vector<double>> linspaces)
         }
     }
     return next;
+}
+
+void vector_print(const vector<double> &v)
+{
+    cout << '[';
+    int len = v.size();
+    for (int i = 0; i < len; i++)
+    {
+        cout << v[i];
+        if (i < len - 1)
+        {
+            cout << ", ";
+        }
+    }
+    cout << ']';
+}
+
+void vector_println(const vector<double> &v)
+{
+    vector_print(v);
+    cout << '\n';
 }
 
 // int main()
