@@ -2,19 +2,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include <algorithm>
 #include <vector>
+#include <algorithm>
 #include "opt.h"
-#include "../Thermodynamics/yx.h"
+#include "../Thermodynamics/yx.h" // TODO: remove after testing
 #include <float.h>
+#include "vector_ops.h"
 
 using namespace std;
+
+solution::solution(vector<double> x, double fx)
+{
+    this->fx = fx;
+    this->x = x;
+}
 
 opt::opt(opt_func_t f, void *context, unsigned int d)
 {
     this->f = f;
     this->d = d;
     this->context = context;
+    this->last_stddev = 0;
 }
 
 void opt::set_polytope(vector<vector<double>> &points)
@@ -126,7 +134,7 @@ void opt::expand(const vector<double> &centroid, const vector<double> &x_r, doub
         x_e[dim] = centroid[dim] * (1 - BETA) + BETA * x_r[dim];
     }
     double f_e = f(x_e, context);
-    cout << "Expansion point" << x_e[0] << "\n";
+    // cout << "Expansion point" << x_e[0] << "\n";
     if (f_e < f_r)
     {
         points[points.size() - 1] = x_e;
@@ -179,7 +187,7 @@ void opt::shrink(const vector<double> &x_1)
         {
             points[i][d] = x_1[d] * (1 - DELTA) + DELTA * points[i][d];
         }
-        cout << "Point " << i << " was updated to " << points[i][0] << "\n";
+        // cout << "Point " << i << " was updated to " << points[i][0] << "\n";
     }
 }
 
@@ -201,7 +209,7 @@ void opt::step()
         return;
     }
     f_r = isnan(f_r) ? DBL_MAX : f_r;
-    cout << "Reflection point " << x_r[0] << "\n";
+    // cout << "Reflection point " << x_r[0] << "\n";
 
     // Step 3
     if (f_r < f_1)
@@ -215,7 +223,7 @@ void opt::step()
     if (f_n <= f_r && f_r < f_n1)
     {
         x_oc = outside_contract(centroid, x_r);
-        cout << "outside contraction point " << x_oc[0] << "\n";
+        // cout << "outside contraction point " << x_oc[0] << "\n";
         double f_oc = f(x_oc, context);
         f_oc = isnan(f_oc) ? DBL_MAX : f_oc;
         if (f_oc < f_r)
@@ -230,7 +238,7 @@ void opt::step()
             return;
         }
     }
-    cout << "f(x_r) = " << f_r << ", f(x_n+1) = " << f_n1 << "\n";
+    // cout << "f(x_r) = " << f_r << ", f(x_n+1) = " << f_n1 << "\n";
 
     // Step 5
     if (f_r >= f_n1)
@@ -265,6 +273,11 @@ void opt::print_points()
     cout << "]\n";
 }
 
+solution *opt::make_solution()
+{
+    return new solution(points.front(), f(points.front(), context));
+}
+
 // Test function
 double fun(const vector<double> &x, void *ctx)
 {
@@ -295,6 +308,46 @@ double p_error(const vector<double> &x, void *f_data)
     return pow(m->P - p1 - p2, 2);
 }
 
+vector<double> opt::eval_all()
+{
+    vector<double> output(points.size(), 0.);
+    for (int i = 0; i < output.size(); i++)
+    {
+        output[i] = f(points[i], context);
+    }
+    return output;
+}
+
+bool opt::should_terminate()
+{
+    vector<double> vals = eval_all();
+    int n = vals.size();
+    double mean = 0;
+    for (auto it = vals.begin(); it != vals.end(); it++)
+    {
+        mean += *it / n;
+    }
+
+    double stddev = 0;
+    for (auto it = vals.begin(); it != vals.end(); it++)
+    {
+        stddev += pow(*it, 2.) / n;
+    }
+    bool output = abs(stddev / last_stddev - 1) < STDDEV_TOL;
+    last_stddev = stddev;
+    return output;
+}
+
+solution *opt::solve()
+{
+    bool started = false;
+    while (!should_terminate() || !started)
+    {
+        step();
+        started = true;
+    }
+    return make_solution();
+}
 
 int main()
 {
@@ -313,25 +366,12 @@ int main()
     context->temp = query_temperature;
 
     opt o(p_error, context, 1);
-    vector<vector<double>> initial_points;
-
-    for (double i = 0; i < 100; i++)
-    {
-        initial_points.emplace_back(vector<double>{i / 100});
-    }
-    // initial_points.emplace_back(vector<double>{0.5});
-    // initial_points.emplace_back(vector<double>{0});
-    // initial_points.emplace_back(vector<double>{1});
-    // initial_points.emplace_back(vector<double>{.75});
-    // initial_points.emplace_back(vector<double>{.25});
-    // initial_points.emplace_back(vector<double>{1, 0, 350});
+    vector<vector<double>> initial_points = zip(
+        vector<vector<double>>{linspace(0, 1, 10)});
     o.set_polytope(initial_points);
 
-    for (int i = 0; i < 1000; i++)
-    {
-        o.step();
-        o.print_points();
-    }
+    solution *s = o.solve();
+    cout << (s->x)[0] << '\n';
 }
 
 // int main()

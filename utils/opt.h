@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
+#include "vector_ops.h"
 
 using namespace std;
 
 #ifndef opt_h
 #define opt_h
 
-#define DIMENSION_ERROR 1
-#define DEGENERATE_POINTS 2
+#define STDDEV_TOL 0.001
 
 static const double ALPHA = 0.1, BETA = 1.1, GAMMA = .1, DELTA = 0.1;
 
@@ -19,10 +19,10 @@ class solution
 {
 public:
     vector<double> x;
-    vector<double> fx;
+    double fx;
 
 private:
-    solution();
+    solution(vector<double> x, double fx);
     friend class opt;
 };
 
@@ -33,6 +33,7 @@ private:
     unsigned int d;
     vector<vector<double>> points;
     void *context;
+    double last_stddev;
 
     void sort_by_opt_function();
     vector<double> get_centroid();
@@ -41,7 +42,9 @@ private:
     vector<double> outside_contract(const vector<double> &centroid, const vector<double> &x_r);
     bool inside_contract(const vector<double> &centroid, double f_n1);
     void shrink(const vector<double> &x1);
-    solution *solution();
+    solution *make_solution();
+    vector<double> eval_all();
+    bool should_terminate();
 
 public:
     opt(opt_func_t f, void *context, unsigned int d);
@@ -49,6 +52,7 @@ public:
     void step();
     void print_points();
     void set_context(void *context);
+    solution *solve();
 };
 
 #endif

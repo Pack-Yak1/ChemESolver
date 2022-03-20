@@ -13,8 +13,8 @@ mt: Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Th
 	$(CC) -o Distillation/mc_cabe_thiele Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o $(CFLAGS)
 	Distillation/mc_cabe_thiele
 
-opt: utils/opt.o Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o
-	$(CC) -o utils/opt utils/opt.o Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o $(CFLAGS)
+opt: utils/opt.o utils/vector_ops.o Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o
+	$(CC) -o utils/opt utils/opt.o utils/vector_ops.o Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o $(CFLAGS)
 	utils/opt
 
 clean:
