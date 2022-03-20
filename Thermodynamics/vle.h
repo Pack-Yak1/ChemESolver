@@ -18,5 +18,5 @@ public:
                                    double end = 1);
     virtual void write_Txy_data(int num_points, ostream &o,
                                 string delim, string line_break,
-                                double start, double end)
+                                double start, double end);
 };
