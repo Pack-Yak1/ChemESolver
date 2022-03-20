@@ -6,8 +6,6 @@
 
 using namespace std;
 
-#define DIMENSION_ERROR 1
-
 /**
  * @brief Multiplies `v` in place by `c`.
  */

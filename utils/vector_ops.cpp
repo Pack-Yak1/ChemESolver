@@ -31,7 +31,7 @@ void sum_in_place(vector<double> &v1, const vector<double> &v2)
 {
     if (v1.size() != v2.size())
     {
-        throw DIMENSION_ERROR;
+        throw invalid_argument("Dimensions of vectors do not match in `sum_in_place`.");
     }
     int d = v1.size();
     for (int dim = 0; dim < v1.size(); dim++)
@@ -44,7 +44,7 @@ vector<double> sum(const vector<double> &v1, const vector<double> &v2)
 {
     if (v1.size() != v2.size())
     {
-        throw DIMENSION_ERROR;
+        throw invalid_argument("Dimensions of vectors do not match in `sum`.");
     }
     int d = v1.size();
     vector<double> output(d, 0.);
@@ -67,7 +67,7 @@ vector<double> sum(const vector<vector<double>> &vecs)
     {
         if (d != it->size())
         {
-            throw DIMENSION_ERROR; // All vectors in vecs must have dimensions d
+            throw invalid_argument("Dimensions of vectors do not match in `sum`.");
         }
         for (auto dim = 0; dim < it->size(); dim++)
         {

@@ -42,16 +42,51 @@ private:
     vector<double> outside_contract(const vector<double> &centroid, const vector<double> &x_r);
     bool inside_contract(const vector<double> &centroid, double f_n1);
     void shrink(const vector<double> &x1);
+    void step();
     solution *make_solution();
     vector<double> eval_all();
     bool should_terminate();
 
 public:
+    /**
+     * @brief Construct a new optimization problem.
+     *
+     * @param f The optimization function to be minimized
+     * @param context Pointer to additional data needed for the optimization
+     * function
+     * @param d The dimensionality of the optimization problem
+     */
     opt(opt_func_t f, void *context, unsigned int d);
+
+    /**
+     * @brief Set the points defining the simplex used for the Nelder-Mead
+     * algorithm
+     *
+     * @param points A vector of vectors [v1, v2, ..., vn] such that all vi are
+     * vectors of size `d`.
+     */
     void set_polytope(vector<vector<double>> &points);
-    void step();
+
+    /**
+     * @brief Pretty print the vectors in `points`
+     */
     void print_points();
+
+    /**
+     * @brief Setter method for context of optimization problem
+     *
+     * @param context The context which will be used by the optimization
+     * function provided
+     */
     void set_context(void *context);
+
+    /**
+     * @brief Run the Nelder-Mead algorithm on the provided optimization
+     * problem.
+     *
+     * @return solution* containing the optimal point and the value of the
+     * objective function at this point.
+     */
     solution *solve();
 };
 

@@ -23,17 +23,17 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->d = d;
     this->context = context;
     this->last_stddev = 0;
+    this->points = vector<vector<double>>();
 }
 
-/**
- * @brief Set the points defining the simplex used for the Nelder-Mead algorithm
- *
- * @param points A vector of vectors [v1, v2, ..., vn] such that all vi are in
- * R^d
- */
 void opt::set_polytope(vector<vector<double>> &points)
 {
     this->points = points;
+}
+
+void opt::set_context(void *context)
+{
+    this->context = context;
 }
 
 /**
@@ -49,7 +49,7 @@ void opt::sort_by_opt_function()
         {
             // `sort_by_opt_function` given `points` argument containing vector
             // of incorrect dimensions.
-            throw DIMENSION_ERROR;
+            throw invalid_argument("Dimensions of vectors do not match in `sort_by_opt_function`. Ensure that all points provided to `set_polytope` match the dimension of the problem.");
         }
         double f1 = f(p1, context);
         double f2 = f(p2, context);
@@ -285,15 +285,6 @@ void opt::step()
     shrink(points[0]);
 }
 
-void opt::set_context(void *context)
-{
-    this->context = context;
-}
-
-/**
- * @brief Pretty print the vectors in `points`
- *
- */
 void opt::print_points()
 {
     cout << "[\n";
@@ -336,6 +327,13 @@ vector<double> opt::eval_all()
     return output;
 }
 
+/**
+ * @brief Termination condition for the Nelder-Mead algorithm, determined using
+ * the change in sample standard deviation of the points in the polytope
+ *
+ * @return true iff the fractional change in sample standard deviation since the
+ * last call to this function is less than `STDDEV_TOL`.
+ */
 bool opt::should_terminate()
 {
     vector<double> vals = eval_all();
@@ -359,6 +357,10 @@ bool opt::should_terminate()
 
 solution *opt::solve()
 {
+    if (points.size() < d + 1)
+    {
+        throw invalid_argument("Insufficient initial points provided before calling `opt::solve`");
+    }
     bool started = false;
     while (!should_terminate() || !started)
     {
