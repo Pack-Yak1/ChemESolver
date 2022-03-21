@@ -7,6 +7,16 @@
 
 using namespace std;
 
+double vector_mean(const vector<double> &v)
+{
+    double output = 0.;
+    for (auto i = v.begin(); i != v.end(); i++)
+    {
+        output += *i;
+    }
+    return output / v.size();
+}
+
 void multiply_in_place(double c, vector<double> &v)
 {
     int d = v.size();

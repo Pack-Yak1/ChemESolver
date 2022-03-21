@@ -6,6 +6,9 @@
 
 using namespace std;
 
+#ifndef NM_opt
+#define NM_opt
+
 #define STDDEV_TOL 1e-10
 
 #define MIN_ITERS 100
@@ -108,3 +111,5 @@ public:
      */
     solution *auto_solve(double min, double max);
 };
+
+#endif

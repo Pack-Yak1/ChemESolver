@@ -6,6 +6,14 @@
 
 using namespace std;
 
+#ifndef vector_ops
+#define vector_ops
+
+/**
+ * @brief Returns the mean of v
+ */
+double vector_mean(const vector<double> &v);
+
 /**
  * @brief Multiplies `v` in place by `c`.
  */
@@ -50,3 +58,5 @@ void vector_print(const vector<double> &v);
 void vector_println(const vector<double> &v);
 
 void matrix_print(const vector<vector<double>> &m);
+
+#endif

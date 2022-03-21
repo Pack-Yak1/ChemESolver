@@ -410,7 +410,7 @@ solution *opt::auto_solve(double min, double max)
     uniform_real_distribution<double> distr(100 * min, 100 * max);
 
     vector<vector<double>> initial_points;
-    double num_vertices = d == 1 ? d + 1 : 25 * d;
+    double num_vertices = d == 1 ? d + 1 : 10 * d;
     initial_points.reserve(num_vertices);
     for (int i = 0; i < num_vertices; i++)
     {
