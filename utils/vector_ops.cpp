@@ -142,6 +142,22 @@ void vector_print(const vector<double> &v)
     cout << ']';
 }
 
+void matrix_print(const vector<vector<double>> &m)
+{
+    cout << '[';
+    int len = m.size();
+    for (int i = 0; i < len; i++)
+    {
+        cout << "  ";
+        vector_print(m[i]);
+        if (i < len - 1)
+        {
+            cout << ",\n";
+        }
+    }
+    cout << "\n]\n";
+}
+
 void vector_println(const vector<double> &v)
 {
     vector_print(v);

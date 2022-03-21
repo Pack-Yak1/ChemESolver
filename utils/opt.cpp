@@ -5,9 +5,9 @@
 #include <vector>
 #include <algorithm>
 #include "opt.h"
-#include "../Thermodynamics/yx.h" // TODO: remove after testing
 #include <float.h>
 #include "vector_ops.h"
+#include <random>
 
 using namespace std;
 
@@ -24,11 +24,13 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->context = context;
     this->last_stddev = 0;
     this->points = vector<vector<double>>();
+    this->num_points = 0;
 }
 
 void opt::set_polytope(vector<vector<double>> &points)
 {
     this->points = points;
+    this->num_points = points.size();
 }
 
 void opt::set_context(void *context)
@@ -91,8 +93,16 @@ void opt::sort_by_opt_function()
  */
 vector<double> opt::get_centroid()
 {
-    int n = points.size();
-    vector<double> output = multiply(1 / n, sum(points));
+    vector<double> output(d, 0.);
+    for (int i = 0; i < num_points - 1; i++)
+    {
+        sum_in_place(output, points[i]);
+    }
+    multiply_in_place(1 / (num_points - 1), output);
+#ifdef DEBUG
+    cout << "Centroid calculated: ";
+    vector_println(output);
+#endif
     return output;
 }
 
@@ -112,13 +122,22 @@ vector<double> opt::get_centroid()
  */
 bool opt::reflect(const vector<double> &centroid, double f_1, double f_n, double &f_r, vector<double> &x_r)
 {
-    vector<double> last = points[points.size() - 1];
+    vector<double> last = points.back();
     sum_in_place(x_r, multiply(1 + ALPHA, centroid));
-    sum_in_place(x_r, multiply(-1, last));
+    sum_in_place(x_r, multiply(-ALPHA, last));
+#ifdef DEBUG
+    cout << "Reflection point calculated, points were";
+    print_points();
+    cout << "Reflection point is";
+    vector_println(x_r);
+#endif
     f_r = f(x_r, context);
-    if (f_r >= f_1 && f_r < f_n)
+    if (f_1 <= f_r && f_r < f_n)
     {
-        points[points.size() - 1] = x_r;
+#ifdef DEBUG
+        cout << "Accepted reflection point\n";
+#endif
+        points.back() = x_r;
         return true;
     }
     return false;
@@ -143,11 +162,17 @@ void opt::expand(const vector<double> &centroid, const vector<double> &x_r, doub
 #endif
     if (f_e < f_r)
     {
-        points[points.size() - 1] = x_e;
+#ifdef DEBUG
+        cout << "accepted expansion point\n";
+#endif
+        points.back() = x_e;
     }
     else
     {
-        points[points.size() - 1] = x_r;
+#ifdef DEBUG
+        cout << "accepted reflection point\n";
+#endif
+        points.back() = x_r;
     }
 }
 
@@ -180,12 +205,19 @@ vector<double> opt::outside_contract(const vector<double> &centroid, const vecto
 bool opt::inside_contract(const vector<double> &centroid, double f_n1)
 {
     vector<double> x_ic(d, 0.);
-    sum_in_place(x_ic, multiply(1 - GAMMA, centroid));
-    sum_in_place(x_ic, multiply(GAMMA, points.back()));
+    sum_in_place(x_ic, multiply(1 + GAMMA, centroid));
+    sum_in_place(x_ic, multiply(-GAMMA, points.back()));
+#ifdef DEBUG
+    cout << "inside contraction point ";
+    vector_println(x_ic);
+#endif
     double f_ic = f(x_ic, context);
     if (f_ic < f_n1)
     {
-        points[points.size() - 1] = x_ic;
+#ifdef DEBUG
+        cout << "accepted inside contraction point\n";
+#endif
+        points.back() = x_ic;
         return true;
     }
     return false;
@@ -199,13 +231,13 @@ bool opt::inside_contract(const vector<double> &centroid, double f_n1)
  */
 void opt::shrink(const vector<double> &x_1)
 {
-    int n = points.size();
-    for (int i = 1; i < n; i++)
+    for (int i = 1; i < num_points; i++)
     {
         multiply_in_place(DELTA, points[i]);
         sum_in_place(points[i], multiply(1 - DELTA, x_1));
 #ifdef DEBUG
-        cout << "Point " << i << " was updated to " << points[i][0] << "\n";
+        cout << "Point " << i << " was updated to ";
+        vector_println(points[i]);
 #endif
     }
 }
@@ -216,16 +248,16 @@ void opt::shrink(const vector<double> &x_1)
  */
 void opt::step()
 {
-    double f_1 = f(points[0], context);
-    double f_n = f(points[points.size() - 2], context);
-    double f_n1 = f(points[points.size() - 1], context);
-    vector<double> centroid = get_centroid();
-
-    // Step 1
-    sort_by_opt_function();
 #ifdef DEBUG
     print_points();
 #endif
+    // Step 1
+    sort_by_opt_function();
+    double f_1 = f(points.front(), context);
+    double f_n = f(points[num_points - 2], context);
+    double f_n1 = f(points.back(), context);
+    vector<double> centroid = get_centroid();
+
     // Step 2
     double f_r;
     vector<double> x_r(d, 0.);
@@ -234,10 +266,6 @@ void opt::step()
         return;
     }
     f_r = isnan(f_r) ? DBL_MAX : f_r;
-#ifdef DEBUG
-    cout << "Reflection point ";
-    vector_println(x_r);
-#endif
 
     // Step 3
     if (f_r < f_1)
@@ -252,13 +280,17 @@ void opt::step()
     {
         x_oc = outside_contract(centroid, x_r);
 #ifdef DEBUG
-        cout << "outside contraction point " << x_oc[0] << "\n";
+        cout << "outside contraction point ";
+        vector_println(x_oc);
 #endif
         double f_oc = f(x_oc, context);
         f_oc = isnan(f_oc) ? DBL_MAX : f_oc;
-        if (f_oc < f_r)
+        if (f_oc <= f_r)
         {
-            points[points.size() - 1] = x_oc;
+#ifdef DEBUG
+            cout << "accepted outside contraction point \n";
+#endif
+            points.back() = x_oc;
             return;
         }
         else
@@ -268,9 +300,6 @@ void opt::step()
             return;
         }
     }
-#ifdef DEBUG
-    cout << "f(x_r) = " << f_r << ", f(x_n+1) = " << f_n1 << "\n";
-#endif
 
     // Step 5
     if (f_r >= f_n1)
@@ -308,6 +337,7 @@ void opt::print_points()
  */
 solution *opt::make_solution()
 {
+    sort_by_opt_function();
     return new solution(points.front(), f(points.front(), context));
 }
 
@@ -319,7 +349,7 @@ solution *opt::make_solution()
  */
 vector<double> opt::eval_all()
 {
-    vector<double> output(points.size(), 0.);
+    vector<double> output(num_points, 0.);
     for (int i = 0; i < output.size(); i++)
     {
         output[i] = f(points[i], context);
@@ -357,81 +387,40 @@ bool opt::should_terminate()
 
 solution *opt::solve()
 {
-    if (points.size() < d + 1)
+    if (num_points < d + 1)
     {
         throw invalid_argument("Insufficient initial points provided before calling `opt::solve`");
     }
+    int num_iters = 0;
     bool started = false;
-    while (!should_terminate() || !started)
+    while (!should_terminate() || !started || num_iters < MIN_ITERS)
     {
         step();
         started = true;
+        num_iters++;
     }
     return make_solution();
 }
 
-// Test functions
-double fun(const vector<double> &x, void *ctx)
+solution *opt::auto_solve(double min, double max)
 {
-    return pow((x[0] - 3), 2) + pow((x[1] + 5), 2) + pow((x[2] - 12), 2);
-}
+    // Initialize RNG
+    random_device rd;
+    default_random_engine eng(rd());
+    uniform_real_distribution<double> distr(100 * min, 100 * max);
 
-typedef struct fixed_temp
-{
-    ModifiedRaoultModel m;
-    double temp;
-} * fixed_temp_t;
-
-double p_error(const vector<double> &x, void *f_data)
-{
-    fixed_temp_t context = (fixed_temp_t)f_data;
-    ModifiedRaoultModel *m = &(context->m);
-    double temp = context->temp;
-    double psat1 = m->psat_helper(m->a1, temp);
-    double psat2 = m->psat_helper(m->a2, temp);
-    double gamma1 = m->b.gamma1(x[0], temp, m->t_unit);
-    double gamma2 = m->b.gamma2(1 - x[0], temp, m->t_unit);
-    double p1 = x[0] * gamma1 * psat1;
-    double p2 = (1 - x[0]) * gamma2 * psat2;
-    return pow(m->P - p1 - p2, 2);
-}
-
-// int main()
-// {
-//     AntoineModel a1 = ANTOINE_METHANOL;
-//     AntoineModel a2 = ANTOINE_WATER;
-//     BinaryWilsonModel b(0.00004073, 0.00001807, 347.4525, 2179.8398, 363.15, T_unit::K);
-//     ModifiedRaoultModel m(a1, a2, b, T_unit::K, 1, P_unit::bar);
-//     double meth_bp = a1.tsat(1);
-//     double water_bp = a2.tsat(1);
-
-//     double query_temperature = 350;
-
-//     // Solve for x given T
-//     fixed_temp_t context = (fixed_temp_t)malloc(sizeof(fixed_temp));
-//     context->m = m;
-//     context->temp = query_temperature;
-
-//     opt o(p_error, context, 1);
-//     vector<vector<double>> initial_points = zip(
-//         vector<vector<double>>{linspace(0, 1, 10)});
-//     o.set_polytope(initial_points);
-
-//     solution *s = o.solve();
-//     cout << (s->x)[0] << '\n';
-// }
-
-int main()
-{
-    opt o(fun, NULL, 3);
-    vector<vector<double>> initial_points = zip(vector<vector<double>>{
-        linspace(-20, 20, 5),
-        linspace(-20, 20, 5),
-        linspace(-20, 20, 5),
-    });
-
-    o.set_polytope(initial_points);
-    solution *s = o.solve();
-    vector_println(s->x);
-    return 0;
+    vector<vector<double>> initial_points;
+    double num_vertices = d == 1 ? d + 1 : 25 * d;
+    initial_points.reserve(num_vertices);
+    for (int i = 0; i < num_vertices; i++)
+    {
+        vector<double> to_add(d, 0);
+        for (int j = 0; j < d; j++)
+        {
+            to_add[j] = distr(eng);
+        }
+        initial_points.emplace_back(to_add);
+    }
+    set_polytope(initial_points);
+    return solve();
 }

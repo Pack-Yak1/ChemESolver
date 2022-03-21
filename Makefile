@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-lnlopt -lm
+CFLAGS=-lnlopt -lm -D DEBUG
 # DEPS=utils/units.cpp
 
 # %.o: %.c $(DEPS)
@@ -13,9 +13,9 @@ mt: Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Th
 	$(CC) -o Distillation/mc_cabe_thiele Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o $(CFLAGS)
 	Distillation/mc_cabe_thiele
 
-opt: utils/opt.o utils/vector_ops.o Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o
-	$(CC) -o utils/opt utils/opt.o utils/vector_ops.o Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o $(CFLAGS)
-	utils/opt
+opt: tests/opt_test.o utils/opt.o utils/vector_ops.o Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o
+	$(CC) -o tests/opt_test tests/opt_test.o utils/opt.o utils/vector_ops.o Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/coords.o $(CFLAGS)
+	tests/opt_test
 
 clean:
 	rm -f Distillation/mc_cabe_thiele.o Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o utils/units.o utils/point.o utils/opt.o utils/coords.o utils/vector_ops.o */*.csv *.csv */*.dat *.dat

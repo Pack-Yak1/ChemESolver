@@ -6,12 +6,18 @@
 
 using namespace std;
 
-#ifndef opt_h
-#define opt_h
-
 #define STDDEV_TOL 1e-10
 
-static const double ALPHA = 0.5, BETA = 2, GAMMA = .5, DELTA = 0.5;
+#define MIN_ITERS 100
+
+#ifdef ANMS
+#define ALPHA 1
+#define BETA 1 + 2 / d
+#define GAMMA 0.75 - 0.5 / d
+#define DELTA 1 - 1 / d
+#else
+static const double ALPHA = 1, BETA = 2, GAMMA = 0.5, DELTA = 0.5;
+#endif
 
 typedef double (*opt_func_t)(const vector<double> &x, void *context);
 
@@ -34,6 +40,7 @@ private:
     vector<vector<double>> points;
     void *context;
     double last_stddev;
+    int num_points;
 
     void sort_by_opt_function();
     vector<double> get_centroid();
@@ -82,12 +89,22 @@ public:
 
     /**
      * @brief Run the Nelder-Mead algorithm on the provided optimization
-     * problem.
+     * problem. Requires that user has set the initial polytope
      *
-     * @return solution* containing the optimal point and the value of the
+     * @return solution* containing the found optimal point and the value of the
      * objective function at this point.
      */
     solution *solve();
-};
 
-#endif
+    /**
+     * @brief Run the Nelder-Mead algorithm on the provided optimization
+     * problem. Overwrites the current polytope and starts the algorithm with
+     * a random polytope consisting points where each coordinate is between min
+     * and max. For better performance, min and max should span the possible
+     * domain of the optimal solution
+     *
+     * @return solution* containing the found optimal point and the value of the
+     * objective function at this point.
+     */
+    solution *auto_solve(double min, double max);
+};

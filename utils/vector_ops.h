@@ -48,3 +48,5 @@ vector<vector<double>> zip(const vector<vector<double>> &linspaces);
 void vector_print(const vector<double> &v);
 
 void vector_println(const vector<double> &v);
+
+void matrix_print(const vector<vector<double>> &m);
