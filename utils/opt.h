@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
+#include <float.h>
 #include "vector_ops.h"
 
 using namespace std;
@@ -9,7 +10,9 @@ using namespace std;
 #ifndef NM_opt
 #define NM_opt
 
-#define STDDEV_TOL 1e-10
+#define STDDEV_TOL DBL_MIN
+
+#define NON_TERMINATING 1e5
 
 #define MIN_ITERS 100
 
@@ -56,6 +59,9 @@ private:
     solution *make_solution();
     vector<double> eval_all();
     bool should_terminate();
+    void set_polytope(vector<vector<double>> &points);
+    solution *solve_helper();
+    void print_points(bool display_fx = false);
 
 public:
     /**
@@ -69,35 +75,12 @@ public:
     opt(opt_func_t f, void *context, unsigned int d);
 
     /**
-     * @brief Set the points defining the simplex used for the Nelder-Mead
-     * algorithm
-     *
-     * @param points A vector of vectors [v1, v2, ..., vn] such that all vi are
-     * vectors of size `d`.
-     */
-    void set_polytope(vector<vector<double>> &points);
-
-    /**
-     * @brief Pretty print the vectors in `points`
-     */
-    void print_points();
-
-    /**
      * @brief Setter method for context of optimization problem
      *
      * @param context The context which will be used by the optimization
      * function provided
      */
     void set_context(void *context);
-
-    /**
-     * @brief Run the Nelder-Mead algorithm on the provided optimization
-     * problem. Requires that user has set the initial polytope
-     *
-     * @return solution* containing the found optimal point and the value of the
-     * objective function at this point.
-     */
-    solution *solve();
 
     /**
      * @brief Run the Nelder-Mead algorithm on the provided optimization
@@ -109,7 +92,7 @@ public:
      * @return solution* containing the found optimal point and the value of the
      * objective function at this point.
      */
-    solution *auto_solve(double min, double max);
+    solution *solve();
 };
 
 #endif

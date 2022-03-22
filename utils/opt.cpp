@@ -27,6 +27,13 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->num_points = 0;
 }
 
+/**
+ * @brief Set the points defining the simplex used for the Nelder-Mead
+ * algorithm
+ *
+ * @param points A vector of vectors [v1, v2, ..., vn] such that all vi are
+ * vectors of size `d`.
+ */
 void opt::set_polytope(vector<vector<double>> &points)
 {
     this->points = points;
@@ -97,8 +104,12 @@ vector<double> opt::get_centroid()
     for (int i = 0; i < num_points - 1; i++)
     {
         sum_in_place(output, points[i]);
+#ifdef DEBUG
+        cout << "iter " << i << " ended. output = ";
+        vector_println(output);
+#endif
     }
-    multiply_in_place(1 / (num_points - 1), output);
+    multiply_in_place(1 / ((double)num_points - 1), output);
 #ifdef DEBUG
     cout << "Centroid calculated: ";
     vector_println(output);
@@ -127,7 +138,7 @@ bool opt::reflect(const vector<double> &centroid, double f_1, double f_n, double
     sum_in_place(x_r, multiply(-ALPHA, last));
 #ifdef DEBUG
     cout << "Reflection point calculated, points were";
-    print_points();
+    print_points(true);
     cout << "Reflection point is";
     vector_println(x_r);
 #endif
@@ -249,10 +260,15 @@ void opt::shrink(const vector<double> &x_1)
 void opt::step()
 {
 #ifdef DEBUG
-    print_points();
+    cout << "Step started with points: \n";
+    print_points(true);
 #endif
     // Step 1
     sort_by_opt_function();
+#ifdef DEBUG
+    cout << "Sorted points: \n";
+    print_points(true);
+#endif
     double f_1 = f(points.front(), context);
     double f_n = f(points[num_points - 2], context);
     double f_n1 = f(points.back(), context);
@@ -314,7 +330,13 @@ void opt::step()
     shrink(points[0]);
 }
 
-void opt::print_points()
+/**
+ * @brief Pretty print the vectors in `points`
+ *
+ * @param display_fx If true, prints the value of the objective function next
+ * to each point printed.
+ */
+void opt::print_points(bool display_fx)
 {
     cout << "[\n";
     for (auto it = points.begin(); it != points.end(); it++)
@@ -324,7 +346,12 @@ void opt::print_points()
         {
             cout << *v << ", ";
         }
-        cout << "]\n";
+        cout << "]";
+        if (display_fx)
+        {
+            cout << "     " << f(*it, context);
+        }
+        cout << "\n";
     }
     cout << "]\n";
 }
@@ -385,7 +412,14 @@ bool opt::should_terminate()
     return output;
 }
 
-solution *opt::solve()
+/**
+ * @brief Run the Nelder-Mead algorithm on the provided optimization
+ * problem. Requires that user has set the initial polytope
+ *
+ * @return solution* containing the found optimal point and the value of the
+ * objective function at this point.
+ */
+solution *opt::solve_helper()
 {
     if (num_points < d + 1)
     {
@@ -398,19 +432,27 @@ solution *opt::solve()
         step();
         started = true;
         num_iters++;
+        if (num_iters > NON_TERMINATING)
+        {
+            // throw runtime_error("Algorithm failed to converge\n");
+            cout << "Algorithm failed to converge in " << NON_TERMINATING << " steps. Returning best point found at current iteration.\n";
+            return make_solution();
+        }
     }
     return make_solution();
 }
 
-solution *opt::auto_solve(double min, double max)
+solution *opt::solve()
 {
     // Initialize RNG
     random_device rd;
     default_random_engine eng(rd());
-    uniform_real_distribution<double> distr(100 * min, 100 * max);
+    double min = 0;
+    double max = 1;
+    uniform_real_distribution<double> distr(min, max);
 
     vector<vector<double>> initial_points;
-    double num_vertices = d == 1 ? d + 1 : 10 * d;
+    double num_vertices = d + 1;
     initial_points.reserve(num_vertices);
     for (int i = 0; i < num_vertices; i++)
     {
@@ -422,5 +464,5 @@ solution *opt::auto_solve(double min, double max)
         initial_points.emplace_back(to_add);
     }
     set_polytope(initial_points);
-    return solve();
+    return solve_helper();
 }
