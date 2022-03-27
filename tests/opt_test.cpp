@@ -70,6 +70,7 @@ void n_dimensional_test_suite(int num_dimensions, int NUM_ITERS, double MIN,
         double iter_max_error = *max_element(errs.begin(), errs.end());
         max_error = max(iter_max_error, max_error);
         total_error += vector_mean(errs);
+        delete (s2);
     }
     cout << "Average time taken: " << total_time / NUM_ITERS << "\n";
     cout << "Highest error: " << max_error << "%\n";

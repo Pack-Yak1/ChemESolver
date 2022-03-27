@@ -193,13 +193,15 @@ vector<double> ModifiedRaoultModel::solve_from_x1(double x1) {
     opt solver(p_error_fixed_x, &context, 1);
     double bp1 = tsat_helper(a1, P);
     double bp2 = tsat_helper(a2, P);
-    vector<double> lb{min(bp1, bp2)};
-    vector<double> ub{max(bp1, bp2)};
+    vector<double> lb{min(bp1, bp2)};  // Lower boiling point must be the lb
+    vector<double> ub{max(bp1, bp2)};  // Higher boiling point must be the ub
 
-    double t_soln = solver.solve(lb, ub)->x[0];
+    solution *soln = solver.solve(lb, ub);
+    double t_soln = soln->x[0];
     double psat1 = psat_helper(a1, t_soln);
     double gamma1 = b.gamma1(x1, t_soln, t_unit);
     double p1 = x1 * gamma1 * psat1;
+    delete (soln);
     return vector<double>{x1, p1 / P, t_soln};
 }
 

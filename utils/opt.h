@@ -95,7 +95,8 @@ class opt {
      * @param ub An estimate for the upper bounds of solutions.
      *
      * @return solution* containing the found optimal point and the value of the
-     * objective function at this point.
+     * objective function at this point. Caller is responsible for deleting this
+     * solution object.
      */
     solution *solve(const vector<double> &lb, const vector<double> &ub);
 };
