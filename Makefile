@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-lnlopt -lm -D DEBUG -D ANMS
+CFLAGS=-lnlopt -lm -DDEBUG -DANMS
 UTILS=utils/units.o utils/coords.o utils/opt.o utils/vector_ops.o
 THERMO=Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o
 DISTL=Distillation/mc_cabe_thiele.o

@@ -1,9 +1,9 @@
-#include "antoine.h"
-#include "wilson.h"
-#include "vector"
 #include "../utils/coords.h"
 #include "../utils/units.h"
+#include "antoine.h"
 #include "gnuplot-iostream.h"
+#include "vector"
+#include "wilson.h"
 using namespace std;
 
 #ifndef yx
@@ -11,12 +11,14 @@ using namespace std;
 
 const double REL_XTOL = 1e-10;
 
-double p_error(const std::vector<double> &x, std::vector<double> &grad, void *f_data);
-double x_error(const std::vector<double> &x, std::vector<double> &grad, void *f_data);
+double p_error(const vector<double> &x, void *context);
+double p_error(const std::vector<double> &x, std::vector<double> &grad,
+               void *f_data);
+double x_error(const std::vector<double> &x, std::vector<double> &grad,
+               void *f_data);
 
-class ModifiedRaoultModel
-{
-public:
+class ModifiedRaoultModel {
+   public:
     AntoineModel a1;
     AntoineModel a2;
     BinaryWilsonModel b;
