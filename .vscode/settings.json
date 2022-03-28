@@ -49,6 +49,7 @@
         "streambuf": "cpp",
         "typeinfo": "cpp",
         "complex": "cpp",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "thread": "cpp",
     }
 }

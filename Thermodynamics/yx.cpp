@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <iostream>
 #include <nlopt.hpp>
+#include <thread>
 #include <vector>
 
 #include "../utils/coords.h"
@@ -16,151 +17,158 @@
 #include "antoine.h"
 #include "gnuplot-iostream.h"
 #include "wilson.h"
-// #include <boost/tuple/tuple.hpp>
-// #include "gnuplot-iostream.h"
 
 using namespace std;
 
 class opt_spec {
-   public:
-    ModifiedRaoultModel *m;
-    double val;
+ public:
+  ModifiedRaoultModel *m;
+  double val;
 
-    opt_spec(ModifiedRaoultModel *m, double val) {
-        this->m = m;
-        this->val = val;
-    }
+  opt_spec(ModifiedRaoultModel *m, double val) {
+    this->m = m;
+    this->val = val;
+  }
 };
 
 ModifiedRaoultModel::ModifiedRaoultModel() {
-    this->a1 = AntoineModel();
-    this->a2 = AntoineModel();
-    this->b = BinaryWilsonModel();
-    this->t_unit = T_unit::K;
-    this->P = 101325;
-    this->p_unit = P_unit::Pa;
+  this->a1 = AntoineModel();
+  this->a2 = AntoineModel();
+  this->b = BinaryWilsonModel();
+  this->t_unit = T_unit::K;
+  this->P = 101325;
+  this->p_unit = P_unit::Pa;
+}
+
+ModifiedRaoultModel::ModifiedRaoultModel(const ModifiedRaoultModel &m) {
+  this->a1 = m.a1;
+  this->a2 = m.a2;
+  this->b = m.b;
+  this->t_unit = m.t_unit;
+  this->P = m.P;
+  this->p_unit = m.p_unit;
 }
 
 ModifiedRaoultModel::ModifiedRaoultModel(AntoineModel a1, AntoineModel a2,
                                          BinaryWilsonModel b, T_unit t_unit,
                                          double P, P_unit p_unit) {
-    this->a1 = a1;
-    this->a2 = a2;
-    this->b = b;
-    this->t_unit = t_unit;
-    this->P = P;
-    this->p_unit = p_unit;
+  this->a1 = a1;
+  this->a2 = a2;
+  this->b = b;
+  this->t_unit = t_unit;
+  this->P = P;
+  this->p_unit = p_unit;
 }
 
 double ModifiedRaoultModel::psat_helper(AntoineModel a, double T) {
-    return a.psat(convert_T(T, t_unit, a.t_unit), p_unit);
+  return a.psat(convert_T(T, t_unit, a.t_unit), p_unit);
 }
 
 double ModifiedRaoultModel::tsat_helper(AntoineModel a, double P) {
-    return a.tsat(convert_P(P, p_unit, a.p_unit), t_unit);
+  return a.tsat(convert_P(P, p_unit, a.p_unit), t_unit);
 }
 
 double x_error(const std::vector<double> &x, std::vector<double> &grad,
                void *f_data) {
-    ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
-    double psat1 = m->psat_helper(m->a1, x[2]);
-    double psat2 = m->psat_helper(m->a2, x[2]);
-    double gamma1 = m->b.gamma1(x[0], x[2], m->t_unit);
-    double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
-    double p1 = x[0] * gamma1 * psat1;
-    double p2 = (1 - x[0]) * gamma2 * psat2;
-    // double x1 = x[1] * m->P / gamma1 / psat1;
-    // double x2 = (1 - x[1]) * m->P / gamma2 / psat2;
-    // cout << x[0] << ',' << x[1] << ',' << x[2] << '\n';
+  ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
+  double psat1 = m->psat_helper(m->a1, x[2]);
+  double psat2 = m->psat_helper(m->a2, x[2]);
+  double gamma1 = m->b.gamma1(x[0], x[2], m->t_unit);
+  double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
+  double p1 = x[0] * gamma1 * psat1;
+  double p2 = (1 - x[0]) * gamma2 * psat2;
+  // double x1 = x[1] * m->P / gamma1 / psat1;
+  // double x2 = (1 - x[1]) * m->P / gamma2 / psat2;
+  // cout << x[0] << ',' << x[1] << ',' << x[2] << '\n';
 
-    return pow(x[1] - p1 / m->P, 2) + pow((1 - x[1]) - p2 / m->P, 2);
+  return pow(x[1] - p1 / m->P, 2) + pow((1 - x[1]) - p2 / m->P, 2);
 }
 
 // Finds a value of mole fraction of component 1 which satisfies the modified
 // Raoult model for temperature `T` in K.
 vector<double> ModifiedRaoultModel::solve_from_T(double T) {
-    // x_0 refers to mole fraction of component 1, x_1 is vapor, x_2 is
-    // temperature
-    nlopt::opt opt(nlopt::LN_COBYLA, 3);
-    std::vector<double> lower_bounds(3);
-    std::vector<double> upper_bounds(3);
-    ModifiedRaoultModel *f_data = this;
-    lower_bounds[0] = 0;
-    lower_bounds[1] = 0;
-    lower_bounds[2] = T;
-    opt.set_lower_bounds(lower_bounds);
-    upper_bounds[0] = 1;
-    upper_bounds[1] = 1;
-    upper_bounds[2] = T;
-    opt.set_upper_bounds(upper_bounds);
-    opt.set_min_objective(x_error, f_data);
-    opt.set_xtol_rel(REL_XTOL);
-    std::vector<double> output(3);
-    output[0] = 0.5;
-    output[1] = 0.5;
-    output[2] = T;
-    double min_f_val;
+  // x_0 refers to mole fraction of component 1, x_1 is vapor, x_2 is
+  // temperature
+  nlopt::opt opt(nlopt::LN_COBYLA, 3);
+  std::vector<double> lower_bounds(3);
+  std::vector<double> upper_bounds(3);
+  ModifiedRaoultModel *f_data = this;
+  lower_bounds[0] = 0;
+  lower_bounds[1] = 0;
+  lower_bounds[2] = T;
+  opt.set_lower_bounds(lower_bounds);
+  upper_bounds[0] = 1;
+  upper_bounds[1] = 1;
+  upper_bounds[2] = T;
+  opt.set_upper_bounds(upper_bounds);
+  opt.set_min_objective(x_error, f_data);
+  opt.set_xtol_rel(REL_XTOL);
+  std::vector<double> output(3);
+  output[0] = 0.5;
+  output[1] = 0.5;
+  output[2] = T;
+  double min_f_val;
 
-    try {
-        nlopt::result result = opt.optimize(output, min_f_val);
-        // std::cout << "found minimum at f(" << output[0] << "," << output[1]
-        // << ") = "
-        //           << std::setprecision(10) << min_f_val << std::endl;
-    } catch (std::exception &e) {
-        std::cout << "nlopt failed: " << e.what() << std::endl;
-    }
-    return output;
+  try {
+    nlopt::result result = opt.optimize(output, min_f_val);
+    // std::cout << "found minimum at f(" << output[0] << "," << output[1]
+    // << ") = "
+    //           << std::setprecision(10) << min_f_val << std::endl;
+  } catch (std::exception &e) {
+    std::cout << "nlopt failed: " << e.what() << std::endl;
+  }
+  return output;
 }
 
 // Finds a value of mole fraction of component 1 which satisfies the modified
 // Raoult model for temperature `T` in units of `t_unit`.
 vector<double> ModifiedRaoultModel::solve_from_T(double T, T_unit t_unit) {
-    return solve_from_T(convert_T(T, t_unit, T_unit::K));
+  return solve_from_T(convert_T(T, t_unit, T_unit::K));
 }
 
 vector<double> ModifiedRaoultModel::solve_from_y1(double y1) {
-    nlopt::opt opt(nlopt::LN_COBYLA, 3);
-    std::vector<double> lower_bounds(3);
-    std::vector<double> upper_bounds(3);
-    ModifiedRaoultModel *f_data = this;
-    lower_bounds[0] = 0;
-    lower_bounds[1] = y1;
-    lower_bounds[2] = 0;
-    opt.set_lower_bounds(lower_bounds);
-    upper_bounds[0] = 1;
-    upper_bounds[1] = y1;
-    upper_bounds[2] = HUGE_VAL;
-    opt.set_upper_bounds(upper_bounds);
-    opt.set_min_objective(x_error, f_data);
-    // opt.add_equality_constraint(y_constraint, &f_data, 1e-8);
-    opt.set_xtol_rel(REL_XTOL);
-    std::vector<double> output(3);
-    output[0] = 0.5;
-    output[1] = y1;
-    output[2] = 300;
-    double min_f_val;
+  nlopt::opt opt(nlopt::LN_COBYLA, 3);
+  std::vector<double> lower_bounds(3);
+  std::vector<double> upper_bounds(3);
+  ModifiedRaoultModel *f_data = this;
+  lower_bounds[0] = 0;
+  lower_bounds[1] = y1;
+  lower_bounds[2] = 0;
+  opt.set_lower_bounds(lower_bounds);
+  upper_bounds[0] = 1;
+  upper_bounds[1] = y1;
+  upper_bounds[2] = HUGE_VAL;
+  opt.set_upper_bounds(upper_bounds);
+  opt.set_min_objective(x_error, f_data);
+  // opt.add_equality_constraint(y_constraint, &f_data, 1e-8);
+  opt.set_xtol_rel(REL_XTOL);
+  std::vector<double> output(3);
+  output[0] = 0.5;
+  output[1] = y1;
+  output[2] = 300;
+  double min_f_val;
 
-    try {
-        nlopt::result result = opt.optimize(output, min_f_val);
-        // std::cout << "found minimum at f(" << output[0] << "," << output[1]
-        // << "," << output[2] << ") = "
-        //           << std::setprecision(10) << min_f_val << std::endl;
-    } catch (std::exception &e) {
-        std::cout << "nlopt failed: " << e.what() << std::endl;
-    }
-    return output;
+  try {
+    nlopt::result result = opt.optimize(output, min_f_val);
+    // std::cout << "found minimum at f(" << output[0] << "," << output[1]
+    // << "," << output[2] << ") = "
+    //           << std::setprecision(10) << min_f_val << std::endl;
+  } catch (std::exception &e) {
+    std::cout << "nlopt failed: " << e.what() << std::endl;
+  }
+  return output;
 }
 
 double p_error(const std::vector<double> &x, std::vector<double> &grad,
                void *f_data) {
-    ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
-    double psat1 = m->psat_helper(m->a1, x[2]);
-    double psat2 = m->psat_helper(m->a2, x[2]);
-    double gamma1 = m->b.gamma1(x[0], x[2], m->t_unit);
-    double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
-    double p1 = x[0] * gamma1 * psat1;
-    double p2 = (1 - x[0]) * gamma2 * psat2;
-    return pow(m->P - p1 - p2, 2);
+  ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
+  double psat1 = m->psat_helper(m->a1, x[2]);
+  double psat2 = m->psat_helper(m->a2, x[2]);
+  double gamma1 = m->b.gamma1(x[0], x[2], m->t_unit);
+  double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
+  double p1 = x[0] * gamma1 * psat1;
+  double p2 = (1 - x[0]) * gamma2 * psat2;
+  return pow(m->P - p1 - p2, 2);
 }
 
 /**
@@ -173,105 +181,136 @@ double p_error(const std::vector<double> &x, std::vector<double> &grad,
  * @return double The value of the loss function.
  */
 double p_error_fixed_x(const vector<double> &x, void *context) {
-    assert(x.size() == 1);
-    opt_spec *spec = (opt_spec *)context;
-    ModifiedRaoultModel *m = spec->m;
-    double liq = spec->val;
-    double temp = x[0];
-    // cout << "T guess = " << temp << "x = " << liq << '\n';
-    double psat1 = m->psat_helper(m->a1, temp);
-    double psat2 = m->psat_helper(m->a2, temp);
-    double gamma1 = m->b.gamma1(liq, temp, m->t_unit);
-    double gamma2 = m->b.gamma2(1 - liq, temp, m->t_unit);
-    double p1 = liq * gamma1 * psat1;
-    double p2 = (1 - liq) * gamma2 * psat2;
-    return pow(m->P - p1 - p2, 2);
+  assert(x.size() == 1);
+  opt_spec *spec = (opt_spec *)context;
+  ModifiedRaoultModel *m = spec->m;
+  double liq = spec->val;
+  double temp = x[0];
+  // cout << "T guess = " << temp << "x = " << liq << '\n';
+  double psat1 = m->psat_helper(m->a1, temp);
+  double psat2 = m->psat_helper(m->a2, temp);
+  double gamma1 = m->b.gamma1(liq, temp, m->t_unit);
+  double gamma2 = m->b.gamma2(1 - liq, temp, m->t_unit);
+  double p1 = liq * gamma1 * psat1;
+  double p2 = (1 - liq) * gamma2 * psat2;
+  return pow(m->P - p1 - p2, 2);
 }
 
 vector<double> ModifiedRaoultModel::solve_from_x1(double x1) {
-    opt_spec context(this, x1);  // Specify that we fix the value of x1
-    opt solver(p_error_fixed_x, &context, 1);
-    double bp1 = tsat_helper(a1, P);
-    double bp2 = tsat_helper(a2, P);
-    vector<double> lb{min(bp1, bp2)};  // Lower boiling point must be the lb
-    vector<double> ub{max(bp1, bp2)};  // Higher boiling point must be the ub
+  opt_spec context(this, x1);  // Specify that we fix the value of x1
+  opt solver(p_error_fixed_x, &context, 1);
+  double bp1 = tsat_helper(a1, P);
+  double bp2 = tsat_helper(a2, P);
+  vector<double> lb{min(bp1, bp2)};  // Lower boiling point must be the lb
+  vector<double> ub{max(bp1, bp2)};  // Higher boiling point must be the ub
 
-    solution *soln = solver.solve(lb, ub);
-    double t_soln = soln->x[0];
-    double psat1 = psat_helper(a1, t_soln);
-    double gamma1 = b.gamma1(x1, t_soln, t_unit);
-    double p1 = x1 * gamma1 * psat1;
-    delete (soln);
-    return vector<double>{x1, p1 / P, t_soln};
+  solution *soln = solver.solve(lb, ub);
+  double t_soln = soln->x[0];
+  double psat1 = psat_helper(a1, t_soln);
+  double gamma1 = b.gamma1(x1, t_soln, t_unit);
+  double p1 = x1 * gamma1 * psat1;
+  delete (soln);
+  return vector<double>{x1, p1 / P, t_soln};
 }
 
 void ModifiedRaoultModel::set_Ty(double x1, double &y1, double &T) {
-    vector<double> answer = solve_from_x1(x1);
-    y1 = answer[1];
-    T = answer[2];
+  vector<double> answer = solve_from_x1(x1);
+  y1 = answer[1];
+  T = answer[2];
 }
 
 void ModifiedRaoultModel::set_Tx(double &x1, double y1, double &T) {
-    vector<double> answer = solve_from_y1(y1);
-    x1 = answer[0];
-    T = answer[2];
+  vector<double> answer = solve_from_y1(y1);
+  x1 = answer[0];
+  T = answer[2];
 }
 
 void ModifiedRaoultModel::set_xy(double &x1, double &y1, double T) {
-    vector<double> answer = solve_from_T(T);
-    x1 = answer[0];
-    y1 = answer[1];
+  vector<double> answer = solve_from_T(T);
+  x1 = answer[0];
+  y1 = answer[1];
 }
 
 // Throws exceptions parametrized on `fn_name` if num_points is less than 2,
 // or if start and end are not within [0, 1], or if start is greater than end.
 void check_bounds(int num_points, double start, double end, string fn_name) {
-    if (num_points < 2) {
-        throw "`" + fn_name + "` was called with `num_points` < 2.\n";
-    }
-    if (start < 0 || end > 1) {
-        throw "`" + fn_name + "` was called with `start` < 0 or `end` > 1.\n";
-    }
-    if (start > end) {
-        throw "`" + fn_name + "` was called with `start` > `end`.\n";
-    }
+  if (num_points < 2) {
+    throw invalid_argument("`" + fn_name +
+                           "` was called with `num_points` < 2.");
+  }
+  if (start < 0 || end > 1) {
+    throw invalid_argument("`" + fn_name +
+                           "` was called with `start` < 0 or `end` > 1.");
+  }
+  if (start > end) {
+    throw invalid_argument("`" + fn_name +
+                           "` was called with `start` > `end`.");
+  }
+}
+
+void ModifiedRaoultModel::generate_Txy_single_thread(double start,
+                                                     double step_size,
+                                                     double num_steps, int pos,
+                                                     vector<Point> &Tx_data,
+                                                     vector<Point> &Ty_data) {
+  double y1, T;
+  for (int i = 0; i < num_steps; i++) {
+    double x1 = start + i * step_size;
+    set_Ty(x1, y1, T);
+    Tx_data[pos + i] = Point(x1, T);
+    Ty_data[pos + i] = Point(y1, T);
+  }
 }
 
 void ModifiedRaoultModel::generate_Txy_data(int num_points,
                                             vector<Point> &Tx_data,
                                             vector<Point> &Ty_data,
-                                            double start, double end) {
-    check_bounds(num_points, start, end, "generate_Txy_data");
-    if (!Tx_data.empty()) {
-        throw "`generate_yx_data` was called with nonempty `Tx_data`.\n";
-    }
-    if (!Ty_data.empty()) {
-        throw "`generate_yx_data` was called with nonempty `Ty_data`.\n";
-    }
-    Tx_data.reserve(num_points);
-    Ty_data.reserve(num_points);
-    double step_size = (end - start) / (num_points - 1);
-    double x1, y1, T;
-    for (int i = 0; i < num_points; i++) {
-        x1 = i * step_size + start;
-        set_Ty(x1, y1, T);
-        Tx_data.emplace_back(x1, T);
-        Ty_data.emplace_back(y1, T);
-    }
+                                            double start, double end,
+                                            int n_workers) {
+  check_bounds(num_points, start, end, "generate_Txy_data");
+  if (!Tx_data.empty()) {
+    throw invalid_argument(
+        "`generate_yx_data` was called with nonempty `Tx_data`.");
+  }
+  if (!Ty_data.empty()) {
+    throw invalid_argument(
+        "`generate_yx_data` was called with nonempty `Ty_data`.");
+  }
+  Tx_data.reserve(num_points);
+  Ty_data.reserve(num_points);
+  double step_size = (end - start) / (num_points - 1);
+  double x1, y1, T;
+
+  // Assign each worker a partition of output graph
+  vector<thread> workers;
+  for (int i = 0; i < n_workers; i++) {
+    int pos = num_points * i / n_workers;
+    int num_steps = num_points * (i + 1) / n_workers - pos;
+    double thread_start = pos * step_size + start;
+    workers.emplace_back(
+        thread(&ModifiedRaoultModel::generate_Txy_single_thread,
+               ModifiedRaoultModel(*this), thread_start, step_size, num_steps,
+               pos, std::ref(Tx_data), std::ref(Ty_data)));
+  }
+
+  // Await completion of all workers
+  for (auto &th : workers) {
+    th.join();
+  }
 }
 
 void ModifiedRaoultModel::write_Txy_data(int num_points, ostream &o,
                                          string delim, string line_break,
                                          double start, double end) {
-    check_bounds(num_points, start, end, "write_Txy_data");
+  check_bounds(num_points, start, end, "write_Txy_data");
 
-    double step_size = 1. / (num_points - 1);
-    double x1, y1, T;
-    for (int i = 0; i < num_points; i++) {
-        x1 = i * step_size;
-        set_Ty(x1, y1, T);
-        o << x1 << delim << y1 << delim << T << line_break;
-    }
+  double step_size = 1. / (num_points - 1);
+  double x1, y1, T;
+  for (int i = 0; i < num_points; i++) {
+    x1 = i * step_size;
+    set_Ty(x1, y1, T);
+    o << x1 << delim << y1 << delim << T << line_break;
+  }
 }
 
 // int main()

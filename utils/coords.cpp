@@ -21,12 +21,14 @@ Line::Line(double x1, double y1, double x2, double y2)
     this->x2 = x2;
     this->y1 = y1;
     this->y2 = y2;
-    this->gradient = x1 == x2 ? numeric_limits<double>::infinity() : (y2 - y1) / (x2 - x1);
+    this->gradient =
+        x1 == x2 ? numeric_limits<double>::infinity() : (y2 - y1) / (x2 - x1);
 }
 
 ostream &operator<<(std::ostream &os, Line const &l)
 {
-    return os << "[(" << l.x1 << ", " << l.y1 << "), (" << l.x2 << ", " << l.y2 << ")]";
+    return os << "[(" << l.x1 << ", " << l.y1 << "), (" << l.x2 << ", " << l.y2
+              << ")]";
 }
 
 double Line::y_intercept()
@@ -42,7 +44,7 @@ double Line::x_intercept()
 // Returns the point of intersection between the lines:
 // y = `line1[0]` * x + `line1[1]` and
 // y = `line2[0]` * x + `line2[1]`
-Point Line::intersection(vector<double> line1, vector<double> line2)
+Point Line::intersection(vector<double> &line1, vector<double> &line2)
 {
     if (line1[0] == line2[0])
     {

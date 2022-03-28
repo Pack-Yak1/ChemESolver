@@ -24,7 +24,7 @@ using namespace std;
 #define GAMMA 0.75 - 0.5 / d
 #define DELTA 1 - 1 / d
 #else
-static const double ALPHA = 1, BETA = 2, GAMMA = 0.5, DELTA = 0.5;
+const double ALPHA = 1, BETA = 2, GAMMA = 0.5, DELTA = 0.5;
 #endif
 
 typedef double (*opt_func_t)(const vector<double> &x, void *context);

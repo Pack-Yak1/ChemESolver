@@ -17,8 +17,15 @@ double p_error(const std::vector<double> &x, std::vector<double> &grad,
 double x_error(const std::vector<double> &x, std::vector<double> &grad,
                void *f_data);
 
-class ModifiedRaoultModel {
-   public:
+class ModifiedRaoultModel
+{
+private:
+    void generate_Txy_single_thread(double start, double step_size,
+                                    double num_steps, int pos,
+                                    vector<Point> &Tx_data,
+                                    vector<Point> &Ty_data);
+
+public:
     AntoineModel a1;
     AntoineModel a2;
     BinaryWilsonModel b;
@@ -34,8 +41,13 @@ class ModifiedRaoultModel {
     ModifiedRaoultModel(AntoineModel a1, AntoineModel a2, BinaryWilsonModel b,
                         T_unit t_unit, double P, P_unit p_unit);
 
-    // Finds mole fractions in liquid and vapor phase consistent with `T` in K.
-    // Returns a vector with first element = x1, second = y1, third = T.
+    /**
+     * @brief Copy constructor for ModifiedRaoultModel
+     */
+    ModifiedRaoultModel(const ModifiedRaoultModel &m);
+
+    // Finds mole fractions in liquid and vapor phase consistent with `T` in
+    // K. Returns a vector with first element = x1, second = y1, third = T.
     vector<double> solve_from_T(double T);
 
     // Finds mole fractions in liquid and vapor phase consistent with `T` in
@@ -70,7 +82,7 @@ class ModifiedRaoultModel {
     // `start` and `end` are between 0 and 1 inclusive and `start` < `end`.
     void generate_Txy_data(int num_points, vector<Point> &Tx_data,
                            vector<Point> &Ty_data, double start = 0,
-                           double end = 1);
+                           double end = 1, int n_workers = 4);
 
     // Writes x, y, T values to `o` with `delimiter` between x, y, and T, and
     // `line_break` between each data point.

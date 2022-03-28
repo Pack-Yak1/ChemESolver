@@ -1,11 +1,14 @@
 CC=g++
-CFLAGS=-lnlopt -lm -DDEBUG -DANMS
+CFLAGS=-lnlopt -lm -lpthread -DANMS
 UTILS=utils/units.o utils/coords.o utils/opt.o utils/vector_ops.o
 THERMO=Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o
 DISTL=Distillation/mc_cabe_thiele.o
 OUTPUT_FMTS=*/*.csv *.csv */*.dat *.dat
 EXE=tests/opt_test Thermodynamics/yx tests/mt_test tests/opt_test
 
+
+# opt.o: 
+# 	$(CC) $(CFLAGS) -c utils/opt.cpp -o utils/opt.o 
 
 opt: tests/opt_test.o $(UTILS)
 	$(CC) -o tests/opt_test tests/opt_test.o $(UTILS) $(CFLAGS)

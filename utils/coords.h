@@ -1,7 +1,8 @@
-#include <iostream>
 #include <stdlib.h>
-#include <vector>
+
+#include <iostream>
 #include <limits>
+#include <vector>
 
 using namespace std;
 
@@ -46,7 +47,7 @@ public:
     // Returns the point of intersection between the lines:
     // y = `line1[0]` * x + `line1[1]` and
     // y = `line2[0]` * x + `line2[1]`
-    static Point intersection(vector<double> line1, vector<double> line2);
+    static Point intersection(vector<double> &line1, vector<double> &line2);
 
     static Point intersection(Line l1, Line l2);
 };

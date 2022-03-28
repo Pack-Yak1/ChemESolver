@@ -1,8 +1,10 @@
-#include <assert.h>
-#include <stdio.h>
-#include <iostream>
-#include <math.h>
 #include "units.h"
+
+#include <assert.h>
+#include <math.h>
+#include <stdio.h>
+
+#include <iostream>
 using namespace std;
 
 double convert_T(double T, T_unit initial, T_unit final)
@@ -25,7 +27,7 @@ double convert_T(double T, T_unit initial, T_unit final)
         c = T - 273.15;
         return final == C ? c : (c - 32) / 1.8;
     default:
-        throw "Unrecognized unit of temperature.\n";
+        throw invalid_argument("Unrecognized unit of temperature.");
     }
 }
 
@@ -83,7 +85,7 @@ double convert_P(double P, P_unit initial, P_unit final)
         }
         break;
     default:
-        throw "Unrecognized unit of pressure.\n";
+        throw invalid_argument("Unrecognized unit of pressure.");
     }
     assert(0);
 }

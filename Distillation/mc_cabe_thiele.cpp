@@ -1,15 +1,18 @@
-#include "../Thermodynamics/antoine.h"
-#include "../Thermodynamics/wilson.h"
-#include "../Thermodynamics/yx.h"
-#include "../utils/units.h"
-#include "../utils/coords.h"
 #include "mc_cabe_thiele.h"
+
 #include <nlopt.hpp>
 #include <vector>
 
+#include "../Thermodynamics/antoine.h"
+#include "../Thermodynamics/wilson.h"
+#include "../Thermodynamics/yx.h"
+#include "../utils/coords.h"
+#include "../utils/units.h"
+
 using namespace std;
 
-MT::MT(ModifiedRaoultModel m, double xD, double xB, double xF, bool total_reflux)
+MT::MT(ModifiedRaoultModel m, double xD, double xB, double xF,
+       bool total_reflux)
 {
     this->m = m;
     this->xD = xD;
@@ -62,23 +65,28 @@ double MT::min_reflux()
 }
 
 // x_0 is liq mole fraction, x_1 is T, x_2 is vap mole fraction
-double q_line_constraint(const std::vector<double> &x, std::vector<double> &grad, void *constraint_data)
+double q_line_constraint(const std::vector<double> &x,
+                         std::vector<double> &grad,
+                         void *constraint_data)
 {
     vector<double> *v = (vector<double> *)constraint_data;
     double q_line_grad = (*v)[0];
     double q_line_intersect = (*v)[1];
     // cout << x[0] << ',' << x[1] << ',' << x[2] << '\n';
     // cout << q_line_grad << ',' << q_line_intersect << '\n';
-    // cout << "constraint error: " << x[1] - q_line_grad * x[0] - q_line_intersect << "\n\n";
+    // cout << "constraint error: " << x[1] - q_line_grad * x[0] -
+    // q_line_intersect << "\n\n";
     return x[1] - q_line_grad * x[0] - q_line_intersect;
 }
 
-double y_constraint(const std::vector<double> &x, std::vector<double> &grad, void *constraint_data)
+double y_constraint(const std::vector<double> &x, std::vector<double> &grad,
+                    void *constraint_data)
 {
     ModifiedRaoultModel *m = (ModifiedRaoultModel *)constraint_data;
     double gamma = m->b.gamma1(x[0], x[2], m->t_unit);
     double psat = m->psat_helper(m->a1, x[2]);
-    // double psat = m->a1.psat(convert_T(x[2], m->t_unit, m->a1.t_unit), m->p_unit);
+    // double psat = m->a1.psat(convert_T(x[2], m->t_unit, m->a1.t_unit),
+    // m->p_unit);
     return gamma * x[0] * psat / m->P - x[1];
 }
 
@@ -121,7 +129,8 @@ double MT::min_reflux(double q)
     try
     {
         nlopt::result result = opt.optimize(output, min_f_val);
-        // std::cout << "found minimum at f(" << output[0] << "," << output[1] << ") = "
+        // std::cout << "found minimum at f(" << output[0] << "," << output[1]
+        // << ") = "
         //           << std::setprecision(10) << min_f_val << std::endl;
     }
     catch (std::exception &e)
@@ -133,12 +142,16 @@ double MT::min_reflux(double q)
     return -gradient / (gradient - 1);
 }
 
-vector<Point> MT::pseudo_equilibrium_curve(int num_points, double efficiency, vector<double> rect_line, vector<double> strip_line)
+vector<Point> MT::pseudo_equilibrium_curve(int num_points,
+                                           double efficiency,
+                                           vector<double> rect_line,
+                                           vector<double> strip_line,
+                                           int n_workers)
 {
     Point intersection = Line::intersection(rect_line, strip_line);
     vector<Point> Tx_data;
     vector<Point> Ty_data;
-    m.generate_Txy_data(num_points, Tx_data, Ty_data, xB, xD);
+    m.generate_Txy_data(num_points, Tx_data, Ty_data, xB, xD, n_workers);
     vector<Point> output;
     output.reserve(num_points);
     double step_size = (xD - xB) / (num_points - 1);
@@ -166,15 +179,13 @@ vector<Point> MT::pseudo_equilibrium_curve(int num_points, double efficiency, ve
         output.emplace_back(x, y_out);
     }
     return output;
-    // cout << intersection << "\n";
-    // return p;
 }
 
 vector<Point> MT::pseudo_equilibrium_curve(int num_points, double efficiency,
-                                           double R, double VB)
+                                           double R, double VB, int n_workers)
 {
-    return pseudo_equilibrium_curve(
-        num_points, efficiency, rectifying_line(R), stripping_line(VB));
+    return pseudo_equilibrium_curve(num_points, efficiency, rectifying_line(R),
+                                    stripping_line(VB), n_workers);
 }
 
 // For total reflux
@@ -210,7 +221,8 @@ int MT::stage_count(vector<double> rect_line, vector<double> strip_line,
     while (x > xB)
     {
         m.set_Tx(x, y, T);
-        // printf("stage count: %d, x: %f, y: %f, T: %f\n", stage_count, x, y, T);
+        // printf("stage count: %d, x: %f, y: %f, T: %f\n", stage_count, x, y,
+        // T);
         stage_count++;
         if (verbose)
         {
