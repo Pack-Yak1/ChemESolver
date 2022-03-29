@@ -29,18 +29,20 @@ const double ALPHA = 1, BETA = 2, GAMMA = 0.5, DELTA = 0.5;
 
 typedef double (*opt_func_t)(const vector<double> &x, void *context);
 
-class solution {
-   public:
+class solution
+{
+public:
     vector<double> x;
     double fx;
 
-   private:
+private:
     solution(vector<double> x, double fx);
     friend class opt;
 };
 
-class opt {
-   private:
+class opt
+{
+private:
     opt_func_t f;
     unsigned int d;
     vector<vector<double>> points;
@@ -66,7 +68,7 @@ class opt {
     solution *solve_helper();
     void print_points(bool display_fx = false);
 
-   public:
+public:
     /**
      * @brief Construct a new optimization problem.
      *

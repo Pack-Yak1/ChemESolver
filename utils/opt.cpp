@@ -265,6 +265,7 @@ void opt::shrink(const vector<double> &x_1)
  */
 void opt::step()
 {
+    // print_points(true);
 #ifdef DEBUG
     cout << "Step started with points: \n";
     print_points(true);
@@ -441,8 +442,7 @@ solution *opt::solve_helper()
         num_iters++;
         if (num_iters > NON_TERMINATING)
         {
-            // throw runtime_error("Algorithm failed to converge\n");
-            cout
+            cerr
                 << "Algorithm failed to converge in " << NON_TERMINATING
                 << " steps. Returning best point found at current iteration.\n";
             return make_solution();

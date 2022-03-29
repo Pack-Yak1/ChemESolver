@@ -14,8 +14,7 @@ const double REL_XTOL = 1e-10;
 double p_error(const vector<double> &x, void *context);
 double p_error(const std::vector<double> &x, std::vector<double> &grad,
                void *f_data);
-double x_error(const std::vector<double> &x, std::vector<double> &grad,
-               void *f_data);
+double x_error(const std::vector<double> &x, void *f_data);
 
 class ModifiedRaoultModel
 {
@@ -90,7 +89,7 @@ public:
     // `start` and `end` are between 0 and 1 inclusive and `start` < `end`.
     void write_Txy_data(int num_points, ostream &o = cout, string delim = ",",
                         string line_break = "\n", double start = 0,
-                        double end = 1);
+                        double end = 1, int n_workers = 4);
 
     // Helper function which returns the psat of a component modeled by a1 or a2
     // in units of `this->p_unit`, which handles unit conversion of temperature
@@ -98,7 +97,7 @@ public:
     double psat_helper(AntoineModel a, double T);
 
     // Helper function which returns the tsat of a component modeled by a1 or a2
-    // in units of `this->t_unit`, which handles unit conversion of pressire
+    // in units of `this->t_unit`, which handles unit conversion of pressure
     // from `this->p_unit`.
     double tsat_helper(AntoineModel a, double P);
 };
