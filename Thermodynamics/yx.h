@@ -9,6 +9,10 @@ using namespace std;
 #ifndef yx
 #define yx
 
+#define x_var 0
+#define y_var 1
+#define T_var 2
+
 const double REL_XTOL = 1e-10;
 
 double p_error(const vector<double> &x, void *context);
@@ -43,22 +47,28 @@ public:
      */
     ModifiedRaoultModel(const ModifiedRaoultModel &m);
 
-    // Finds mole fractions in liquid and vapor phase consistent with `T` in
-    // K. Returns a vector with first element = x1, second = y1, third = T.
-    vector<double> solve_from_T(double T);
+    /**
+     * @brief Solve the system for liquid and vapor phase mole fractions of
+     * component 1 and temperature, given any of the 3. Denoted as (x1, y1, T),
+     * respectively.
+     *
+     * @param val The known value among x1, y1, T.
+     * @param dim Must be x_var if x1, y_var if y1, T_var if T.
+     * @return Size 3 vector containing [x1, y1, T].
+     */
+    vector<double> solve_from_constraint(double val, int dim);
 
-    // Finds mole fractions in liquid and vapor phase consistent with `T` in
-    // units of `t_unit`.
-    // Returns a vector with first element = x1, second = y1, third = T.
-    vector<double> solve_from_T(double T, T_unit t_unit);
-
-    // Finds mole fraction in liquid phase and temperature consistent with `y1`.
-    // Returns a vector with first element = x1, second = y1, third = T.
-    vector<double> solve_from_y1(double y1);
-
-    // Finds mole fraction in vapor phase and temperature consistent with `x1`.
-    // Returns a vector with first element = x1, second = y1, third = T.
-    vector<double> solve_from_x1(double x1);
+    /**
+     * @brief Solve the system for liquid and vapor phase mole fractions of
+     * component 1 and temperature in a specified unit, given any of the 3.
+     * Denoted as (x1, y1, T), respectively.
+     *
+     * @param val The known value among x1, y1, T.
+     * @param dim Must be x_var if x1, y_var if y1, T_var if T.
+     * @param t_unit The unit which T is in. Unused if `dim` is not T_var
+     * @return Size 3 vector containing [x1, y1, T].
+     */
+    vector<double> solve_from_constraint(double val, int dim, T_unit t_unit);
 
     // Sets the values of `T` in units of K and `y1` to values consistent with
     // this model's pressure and the value of `x1`

@@ -76,7 +76,7 @@ vector<double> MT::stripping_line(double Vbar, double B)
 double MT::min_reflux()
 {
     double yF = xF;
-    double T = 300;
+    double T;
     m.set_Ty(xF, yF, T);
     // cout << xF << ',' << yF << ',' << T << '\n';
     double gradient = Line(xF, yF, xD, xD).gradient;
@@ -120,8 +120,8 @@ double MT::min_reflux(double q)
     opt solver(min_reflux_objective, &ctx, 3);
     double bp1 = m.tsat_helper(m.a1, m.P);
     double bp2 = m.tsat_helper(m.a2, m.P);
-    vector<double> lb{0, 0, min(bp1, bp2)};
-    vector<double> ub{1, 1, max(bp1, bp2)};
+    vector<double> lb{0, 0, 0};
+    vector<double> ub{1, 1, 10 * max(bp1, bp2)};
 
     solution *soln = solver.solve(lb, ub);
     double x_pinch = soln->x[0];

@@ -20,10 +20,6 @@
 
 using namespace std;
 
-#define x_var 0
-#define y_var 1
-#define T_var 2
-
 class opt_spec
 {
 public:
@@ -111,7 +107,7 @@ double p_error(const vector<double> &x, void *context)
         liq = x[0];
         break;
     default:
-        assert(0);
+        throw invalid_argument("`p_error` cannot be used where the constrained variable is not x1 or T. Got: " + constraint);
     }
     double psat1 = m->psat_helper(m->a1, temp);
     double psat2 = m->psat_helper(m->a2, temp);
@@ -123,11 +119,14 @@ double p_error(const vector<double> &x, void *context)
 }
 
 /**
- * @brief
+ * @brief Loss function for component-wise fugacities.
  *
- * @param x
- * @param context
- * @return double
+ * @param x x[0] is the liquid phase mole fraction of component 1. x[1] is the
+ * temperature of the system.
+ * @param context opt spec object containing an equilibrium model, val set to
+ * the vapor phase mole fraction of component 1, and constraint = y_var.
+ * @return The sum of squared errors of fugacities between the liquid and vapor
+ * phases for each component
  */
 double x_error(const std::vector<double> &x, void *context)
 {
@@ -140,7 +139,7 @@ double x_error(const std::vector<double> &x, void *context)
     case y_var:
         break;
     default:
-        assert(0);
+        throw invalid_argument("`x_error` cannot be used where the constrained variable is not y1. Got: " + constraint);
     }
     double liq = x[0];
     double temp = x[1];
@@ -156,83 +155,99 @@ double x_error(const std::vector<double> &x, void *context)
     return pow(vap - p1 / m->P, 2) + pow((1 - vap) - p2 / m->P, 2);
 }
 
-// Finds a value of mole fraction of component 1 which satisfies the modified
-// Raoult model for temperature `T` in K.
-vector<double> ModifiedRaoultModel::solve_from_T(double T)
+vector<double> ModifiedRaoultModel::solve_from_constraint(double val, int dim)
 {
-    opt_spec context(this, T, T_var); // Specify that we fix the value of T
-    opt solver(p_error, &context, 1);
-    vector<double> lb{0.}; // Solution is bounded by [0, 1]
-    vector<double> ub{1.};
+    // Specify number of dimensions of optimization problem and objective fn
+    int num_dimensions = dim == y_var ? 2 : 1;
+    opt_func_t objective_function = dim == y_var ? x_error : p_error;
+    opt_spec context(this, val, dim);
+    vector<double> lb(num_dimensions);
+    vector<double> ub(num_dimensions);
+    double x1, y1, T;
+    opt solver(objective_function, &context, num_dimensions);
+
+    double bp1 = tsat_helper(a1, P);
+    double bp2 = tsat_helper(a2, P);
+
+    // Temperature bounds are pessimal because of min/max boiling azeotropes
+    switch (dim)
+    {
+    case x_var:
+    {
+        x1 = val;
+        lb[0] = 0;
+        ub[0] = (10 * max(bp1, bp2));
+        break;
+    }
+    case y_var:
+    {
+        y1 = val;
+        lb[0] = 0;
+        lb[1] = 0;
+        ub[0] = 1;
+        ub[1] = 10 * max(bp1, bp2);
+        break;
+    }
+    case T_var:
+    {
+        T = val;
+        lb[0] = 0;
+        ub[0] = 1;
+        break;
+    }
+    default:
+        throw invalid_argument("Invalid `dim` argument passed to `solve_from_constraint`");
+    }
 
     solution *soln = solver.solve(lb, ub);
-    double x1_soln = soln->x[0];
+
+    // Solving from y gives sufficient info to define the system. Return.
+    if (dim == y_var)
+    {
+        x1 = soln->x[0];
+        T = soln->x[1];
+        delete soln;
+        return vector<double>{x1, y1, T};
+    }
+
+    // Only x and T constrained solvers remain. Assign missing value and find y1
+    if (dim == x_var)
+    {
+        T = soln->x[0];
+    }
+    else
+    {
+        x1 = soln->x[0];
+    }
+    delete soln;
     double psat1 = psat_helper(a1, T);
-    double gamma1 = b.gamma1(x1_soln, T, t_unit);
-    double p1 = x1_soln * gamma1 * psat1;
-    delete soln;
-    return vector<double>{x1_soln, p1 / P, T};
-}
-
-// Finds a value of mole fraction of component 1 which satisfies the modified
-// Raoult model for temperature `T` in units of `t_unit`.
-vector<double> ModifiedRaoultModel::solve_from_T(double T, T_unit t_unit)
-{
-    return solve_from_T(convert_T(T, t_unit, T_unit::K));
-}
-
-vector<double> ModifiedRaoultModel::solve_from_y1(double y1)
-{
-    opt_spec context(this, y1, y_var); // Specify that we fix the value of x1
-    opt solver(x_error, &context, 2);
-    double bp1 = tsat_helper(a1, P);
-    double bp2 = tsat_helper(a2, P);
-    // Solution x1 bounded by [0, 1], T bounded by bp's.
-    vector<double> lb{0, 0};
-    vector<double> ub{1, 400};
-
-    solution *soln = solver.solve(lb, ub);
-    double x = soln->x[0];
-    double t = soln->x[1];
-    delete soln;
-    return vector<double>{x, y1, t};
-}
-
-vector<double> ModifiedRaoultModel::solve_from_x1(double x1)
-{
-    opt_spec context(this, x1, x_var); // Specify that we fix the value of x1
-    opt solver(p_error, &context, 1);
-    double bp1 = tsat_helper(a1, P);
-    double bp2 = tsat_helper(a2, P);
-    vector<double> lb{min(bp1, bp2)}; // Lower boiling point must be the lb
-    vector<double> ub{max(bp1, bp2)}; // Higher boiling point must be the ub
-
-    solution *soln = solver.solve(lb, ub);
-    double t_soln = soln->x[0];
-    double psat1 = psat_helper(a1, t_soln);
-    double gamma1 = b.gamma1(x1, t_soln, t_unit);
+    double gamma1 = b.gamma1(x1, T, t_unit);
     double p1 = x1 * gamma1 * psat1;
-    delete soln;
-    return vector<double>{x1, p1 / P, t_soln};
+    y1 = p1 / P;
+    return vector<double>{x1, y1, T};
+}
+vector<double> ModifiedRaoultModel::solve_from_constraint(double val, int dim, T_unit t_unit)
+{
+    return solve_from_constraint(convert_T(val, t_unit, T_unit::K), dim);
 }
 
 void ModifiedRaoultModel::set_Ty(double x1, double &y1, double &T)
 {
-    vector<double> answer = solve_from_x1(x1);
+    vector<double> answer = solve_from_constraint(x1, x_var);
     y1 = answer[1];
     T = answer[2];
 }
 
 void ModifiedRaoultModel::set_Tx(double &x1, double y1, double &T)
 {
-    vector<double> answer = solve_from_y1(y1);
+    vector<double> answer = solve_from_constraint(y1, y_var);
     x1 = answer[0];
     T = answer[2];
 }
 
 void ModifiedRaoultModel::set_xy(double &x1, double &y1, double T)
 {
-    vector<double> answer = solve_from_T(T);
+    vector<double> answer = solve_from_constraint(T, T_var);
     x1 = answer[0];
     y1 = answer[1];
 }
@@ -276,13 +291,13 @@ void ModifiedRaoultModel::generate_Txy_single_thread(double start,
         thread_Ty.emplace_back(y1, T);
     }
 
-    // mtx.lock();
+    mtx.lock();
     for (int i = 0; i < num_steps; i++)
     {
         Tx_data[pos + i] = thread_Tx[i];
         Ty_data[pos + i] = thread_Ty[i];
     }
-    // mtx.unlock();
+    mtx.unlock();
 }
 
 void ModifiedRaoultModel::generate_Txy_data(int num_points,

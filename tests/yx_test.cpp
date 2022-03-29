@@ -9,7 +9,7 @@
 
 using namespace std;
 
-const int NUM_POINTS = 1000000;
+const int NUM_POINTS = 1001;
 const unsigned int NUM_CORES = thread::hardware_concurrency();
 
 void test_multithreaded_Ty_solver(ModifiedRaoultModel m)
