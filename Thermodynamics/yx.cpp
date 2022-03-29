@@ -9,6 +9,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <mutex>
 
 #include "../utils/coords.h"
 #include "../utils/opt.h"
@@ -197,19 +198,6 @@ vector<double> ModifiedRaoultModel::solve_from_y1(double y1)
     return vector<double>{x, y1, t};
 }
 
-double p_error(const std::vector<double> &x, std::vector<double> &grad,
-               void *f_data)
-{
-    ModifiedRaoultModel *m = (ModifiedRaoultModel *)f_data;
-    double psat1 = m->psat_helper(m->a1, x[2]);
-    double psat2 = m->psat_helper(m->a2, x[2]);
-    double gamma1 = m->b.gamma1(x[0], x[2], m->t_unit);
-    double gamma2 = m->b.gamma2(1 - x[0], x[2], m->t_unit);
-    double p1 = x[0] * gamma1 * psat1;
-    double p2 = (1 - x[0]) * gamma2 * psat2;
-    return pow(m->P - p1 - p2, 2);
-}
-
 vector<double> ModifiedRaoultModel::solve_from_x1(double x1)
 {
     opt_spec context(this, x1, x_var); // Specify that we fix the value of x1
@@ -274,16 +262,27 @@ void ModifiedRaoultModel::generate_Txy_single_thread(double start,
                                                      double step_size,
                                                      double num_steps, int pos,
                                                      vector<Point> &Tx_data,
-                                                     vector<Point> &Ty_data)
+                                                     vector<Point> &Ty_data,
+                                                     mutex &mtx)
 {
     double y1, T;
+    vector<Point> thread_Tx;
+    vector<Point> thread_Ty;
     for (int i = 0; i < num_steps; i++)
     {
         double x1 = start + i * step_size;
         set_Ty(x1, y1, T);
-        Tx_data[pos + i] = Point(x1, T);
-        Ty_data[pos + i] = Point(y1, T);
+        thread_Tx.emplace_back(x1, T);
+        thread_Ty.emplace_back(y1, T);
     }
+
+    // mtx.lock();
+    for (int i = 0; i < num_steps; i++)
+    {
+        Tx_data[pos + i] = thread_Tx[i];
+        Ty_data[pos + i] = thread_Ty[i];
+    }
+    // mtx.unlock();
 }
 
 void ModifiedRaoultModel::generate_Txy_data(int num_points,
@@ -308,6 +307,11 @@ void ModifiedRaoultModel::generate_Txy_data(int num_points,
     double step_size = (end - start) / (num_points - 1);
     double x1, y1, T;
 
+    // Mutual exclusion actually isn't needed here. We just don't want cores to
+    // keep prefetching the entire output vector to their caches and invalidate
+    // other cores' cache lines.
+    mutex answer_mtx;
+
     // Assign each worker a partition of output graph
     vector<thread> workers;
     for (int i = 0; i < n_workers; i++)
@@ -317,8 +321,9 @@ void ModifiedRaoultModel::generate_Txy_data(int num_points,
         double thread_start = pos * step_size + start;
         workers.emplace_back(
             thread(&ModifiedRaoultModel::generate_Txy_single_thread,
-                   ModifiedRaoultModel(*this), thread_start, step_size, num_steps,
-                   pos, std::ref(Tx_data), std::ref(Ty_data)));
+                   ModifiedRaoultModel(*this), thread_start, step_size,
+                   num_steps, pos, std::ref(Tx_data), std::ref(Ty_data),
+                   std::ref(answer_mtx)));
     }
 
     // Await completion of all workers

@@ -1,6 +1,5 @@
 #include "mc_cabe_thiele.h"
 
-#include <nlopt.hpp>
 #include <vector>
 
 #include "../Thermodynamics/antoine.h"
@@ -8,8 +7,28 @@
 #include "../Thermodynamics/yx.h"
 #include "../utils/coords.h"
 #include "../utils/units.h"
+#include "../utils/opt.h"
 
 using namespace std;
+
+/**
+ * @brief Class for passing a linear constraint and model data to opt solver
+ */
+class opt_context
+{
+public:
+    ModifiedRaoultModel *m;
+    double grad;
+    double y_intersect;
+
+    opt_context(ModifiedRaoultModel *m, double grad, double y_intersect)
+    {
+        this->m = m;
+        this->grad = grad;
+        // 0 for x1, 1 for y1, 2 for T.
+        this->y_intersect = y_intersect;
+    }
+};
 
 MT::MT(ModifiedRaoultModel m, double xD, double xB, double xF,
        bool total_reflux)
@@ -64,30 +83,28 @@ double MT::min_reflux()
     return -gradient / (gradient - 1);
 }
 
-// x_0 is liq mole fraction, x_1 is T, x_2 is vap mole fraction
-double q_line_constraint(const std::vector<double> &x,
-                         std::vector<double> &grad,
-                         void *constraint_data)
+double min_reflux_objective(const vector<double> &x, void *context)
 {
-    vector<double> *v = (vector<double> *)constraint_data;
-    double q_line_grad = (*v)[0];
-    double q_line_intersect = (*v)[1];
-    // cout << x[0] << ',' << x[1] << ',' << x[2] << '\n';
-    // cout << q_line_grad << ',' << q_line_intersect << '\n';
-    // cout << "constraint error: " << x[1] - q_line_grad * x[0] -
-    // q_line_intersect << "\n\n";
-    return x[1] - q_line_grad * x[0] - q_line_intersect;
-}
+    opt_context *ctx = (opt_context *)context;
+    ModifiedRaoultModel *m = ctx->m;
+    double grad = ctx->grad;
+    double its = ctx->y_intersect;
 
-double y_constraint(const std::vector<double> &x, std::vector<double> &grad,
-                    void *constraint_data)
-{
-    ModifiedRaoultModel *m = (ModifiedRaoultModel *)constraint_data;
-    double gamma = m->b.gamma1(x[0], x[2], m->t_unit);
-    double psat = m->psat_helper(m->a1, x[2]);
-    // double psat = m->a1.psat(convert_T(x[2], m->t_unit, m->a1.t_unit),
-    // m->p_unit);
-    return gamma * x[0] * psat / m->P - x[1];
+    double x1 = x[0];
+    double y1 = x[1];
+    double T = x[2];
+
+    double gamma1 = m->b.gamma1(x1, T, m->t_unit);
+    double gamma2 = m->b.gamma2(1 - x1, T, m->t_unit);
+    double psat1 = m->psat_helper(m->a1, T);
+    double psat2 = m->psat_helper(m->a2, T);
+    double fugacity1 = (gamma1 * x1 * psat1);
+    double fugacity2 = (gamma2 * (1 - x1) * psat2);
+
+    double constraint_loss = pow(x1 * grad + its - y1, 2.);
+    double y1_loss = pow(fugacity1 / m->P - y1, 2.);
+    double y2_loss = pow(fugacity2 / m->P - (1 - y1), 2.);
+    return constraint_loss + y1_loss + y2_loss;
 }
 
 // Finds minimum reflux ratio for a specified q-value
@@ -97,48 +114,20 @@ double MT::min_reflux(double q)
     {
         return min_reflux();
     }
-    vector<double> constraint_data;
-    constraint_data.reserve(2);
-    constraint_data.emplace_back(-q / (1. - q));
-    constraint_data.emplace_back(-xF / (q - 1.));
 
-    // x_0, x_1 is liq, vap mole fraction, x_2 is T
-    nlopt::opt opt(nlopt::LN_COBYLA, 3);
-    std::vector<double> lower_bounds(3);
-    std::vector<double> upper_bounds(3);
-    ModifiedRaoultModel *f_data = &m;
-    double boiling_point_1 = m.tsat_helper(m.a1, m.P);
-    double boiling_point_2 = m.tsat_helper(m.a2, m.P);
-    lower_bounds[0] = 0;
-    lower_bounds[1] = 0;
-    lower_bounds[2] = min(boiling_point_1, boiling_point_2);
-    opt.set_lower_bounds(lower_bounds);
-    upper_bounds[0] = 1;
-    upper_bounds[1] = 1;
-    upper_bounds[2] = max(boiling_point_1, boiling_point_2);
-    opt.set_upper_bounds(upper_bounds);
-    opt.set_min_objective(yx::p_error, f_data);
-    opt.add_equality_constraint(q_line_constraint, &constraint_data, 1e-8);
-    opt.add_equality_constraint(y_constraint, &m, 1e-8);
-    opt.set_xtol_rel(yx::REL_XTOL);
-    std::vector<double> output(3);
-    output[0] = xF;
-    output[1] = 1;
-    output[2] = lower_bounds[2];
-    double min_f_val;
-    try
-    {
-        nlopt::result result = opt.optimize(output, min_f_val);
-        // std::cout << "found minimum at f(" << output[0] << "," << output[1]
-        // << ") = "
-        //           << std::setprecision(10) << min_f_val << std::endl;
-    }
-    catch (std::exception &e)
-    {
-        std::cout << "nlopt failed: " << e.what() << std::endl;
-    }
-    // cout << output[0] << ',' << output[1] << ',' << output[2] << '\n';
-    double gradient = Line(output[0], output[1], xD, xD).gradient;
+    // Formula for q-line from CHEME 3320
+    opt_context ctx(&m, -q / (1. - q), -xF / (q - 1.));
+    opt solver(min_reflux_objective, &ctx, 3);
+    double bp1 = m.tsat_helper(m.a1, m.P);
+    double bp2 = m.tsat_helper(m.a2, m.P);
+    vector<double> lb{0, 0, min(bp1, bp2)};
+    vector<double> ub{1, 1, max(bp1, bp2)};
+
+    solution *soln = solver.solve(lb, ub);
+    double x_pinch = soln->x[0];
+    double y_pinch = soln->x[1];
+    double gradient = Line(x_pinch, y_pinch, xD, xD).gradient;
+    delete soln;
     return -gradient / (gradient - 1);
 }
 
@@ -230,10 +219,10 @@ int MT::stage_count(vector<double> rect_line, vector<double> strip_line,
         }
         vector<double> *op_line = x > intersection.x ? &rect_line : &strip_line;
         y = (*op_line)[0] * x + (*op_line)[1];
-        // if (verbose)
-        // {
-        //     o << stage_count << delim << x << delim << y << line_break;
-        // }
+        if (verbose)
+        {
+            o << stage_count << delim << x << delim << y << line_break;
+        }
     }
     return stage_count;
 }

@@ -12,8 +12,6 @@ using namespace std;
 const double REL_XTOL = 1e-10;
 
 double p_error(const vector<double> &x, void *context);
-double p_error(const std::vector<double> &x, std::vector<double> &grad,
-               void *f_data);
 double x_error(const std::vector<double> &x, void *f_data);
 
 class ModifiedRaoultModel
@@ -22,7 +20,7 @@ private:
     void generate_Txy_single_thread(double start, double step_size,
                                     double num_steps, int pos,
                                     vector<Point> &Tx_data,
-                                    vector<Point> &Ty_data);
+                                    vector<Point> &Ty_data, mutex &mtx);
 
 public:
     AntoineModel a1;

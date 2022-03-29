@@ -34,4 +34,4 @@ well as a unified interface in the pipeline.
 
 1. Support for implicit unit conversions
 2. Rudimentary vector operations (E.g. arithmetic, display, linspace/mesh generation)
-3. Nelder-Meads algorithm for unbounded, non-gradient based optimization (Replacing use of nlopt module soon)
+3. Solver using Nelder-Meads algorithm for non-gradient based optimization

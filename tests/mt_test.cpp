@@ -31,6 +31,11 @@ int main()
         cout << *i << "\n";
     }
 
+    cout << "Testing min reflux, compare against continuous distillation data\n";
+    cout << "For saturated liquid, R_min is: " << mt.min_reflux() << "\n";
+    cout << "For saturated vapor, R_min is: " << mt.min_reflux(0) << "\n";
+    cout << "For q = 0.5, R_min is: " << mt.min_reflux(0.5) << "\n";
+
     // ofstream output_file;
     // output_file.open("seps.csv");
     // mt.m.write_Txy_data(10001, output_file);

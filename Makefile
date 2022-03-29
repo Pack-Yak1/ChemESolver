@@ -1,5 +1,5 @@
 CC=g++
-LINKS=-lnlopt -lm -lpthread
+LINKS=-lm -lpthread
 CFLAGS=-DANMS -g
 UTILS=utils/units.o utils/coords.o utils/opt.o utils/vector_ops.o
 THERMO=Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o
