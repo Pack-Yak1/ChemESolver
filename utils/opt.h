@@ -16,8 +16,6 @@ using namespace std;
 
 #define NON_TERMINATING 1e5
 
-#define MIN_ITERS 100
-
 typedef double (*opt_func_t)(const vector<double> &x, void *context);
 
 class solution

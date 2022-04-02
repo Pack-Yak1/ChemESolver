@@ -14,11 +14,11 @@ opt: $(UTILS) tests/opt_test.o
 	$(CC) -o tests/opt_test tests/opt_test.o $(UTILS) $(LINKS)
 	tests/opt_test
 
-yx: tests/yx_test.o $(THERMO) $(UTILS)
+yx: $(UTILS) $(THERMO) tests/yx_test.o 
 	$(CC) -o tests/yx_test tests/yx_test.o $(THERMO) $(UTILS) $(LINKS)
 	tests/yx_test
 
-mt: tests/mt_test.o $(DISTL) $(THERMO) $(UTILS)
+mt: $(UTILS) $(THERMO) $(DISTL) tests/mt_test.o
 	$(CC) -o tests/mt_test tests/mt_test.o $(DISTL) $(THERMO) $(UTILS) $(LINKS)
 	tests/mt_test
 

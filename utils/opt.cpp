@@ -78,95 +78,57 @@ void swap(vector<vector<double>> &arr, int i, int j)
  */
 void opt::sort_by_opt_function()
 {
-    // auto comparator = [&](vector<double> p1, vector<double> p2) -> bool
-    // {
-    //     // Check if dimensions correct
-    //     if (p1.size() != d || p2.size() != d)
-    //     {
-    //         // `sort_by_opt_function` given `points` argument containing vector
-    //         // of incorrect dimensions.
-    //         throw invalid_argument(
-    //             "Dimensions of vectors do not match in `sort_by_opt_function`. "
-    //             "Ensure that all points provided to `set_polytope` match the "
-    //             "dimension of the problem.");
-    //     }
-    //     double f1 = f(p1, context);
-    //     double f2 = f(p2, context);
-    //     double cmp;
-    //     if (isnan(f1))
-    //     {
-    //         cmp = 1;
-    //     }
-    //     else if (isnan(f2))
-    //     {
-    //         cmp = -1;
-    //     }
-    //     else
-    //     {
-    //         cmp = f(p1, context) - f(p2, context);
-    //     }
-    //     if (cmp == 0)
-    //     {
-    //         // Consistent tie break needed for Nelder-Meads
-    //         for (int i = 0; i < d; i++)
-    //         {
-    //             double entry_cmp = p1[i] - p2[i];
-    //             if (entry_cmp != 0)
-    //             {
-    //                 return entry_cmp < 0;
-    //             }
-    //         }
-    //     }
-    //     return cmp < 0;
-    // };
-    // sort(points.begin(), points.end(), comparator);
-
+    // Comparator to sort by cached value in fx_cache, using points to tie break
     auto comparator = [this](int left, int right) -> bool
     {
-        // sort indices according to corresponding array element
-        return fx_cache[left] < fx_cache[right];
+        double cmp;
+        double f1 = fx_cache[left];
+        double f2 = fx_cache[right];
+        if (isnan(f1))
+        {
+            cmp = 1;
+        }
+        else if (isnan(f2))
+        {
+            cmp = -1;
+        }
+        else
+        {
+            cmp = f1 - f2;
+        }
+        if (cmp == 0)
+        {
+            // Consistent tie break needed for Nelder-Meads
+            for (int i = 0; i < d; i++)
+            {
+                double entry_cmp = points[left][i] - points[right][i];
+                if (entry_cmp != 0)
+                {
+                    return entry_cmp < 0;
+                }
+            }
+        }
+        return cmp < 0;
     };
     // Argsort and store indices
     vector<double> indices(num_points);
     std::iota(indices.begin(), indices.end(), 0);
-    // cout << "points: \n";
-    // print_points();
-    // cout << "cache: \n";
-    // vector_println(fx_cache);
-
     sort(indices.begin(), indices.end(), comparator);
-    // cout << "indices: \n";
-    // vector_println(indices);
+    
     int i = 0;
     vector<double> next_cache;
     vector<vector<double>> next_points;
-    // vector_println(indices);
 
     while (i < num_points)
     {
         int idx = indices[i];
         double element = fx_cache[idx];
         next_cache.emplace_back(element);
-        // cout << "got element=" << element << " at cache[" << idx << "]\n";
         next_points.emplace_back(points[idx]);
-        // while (indices[idx] != idx)
-        // {
-        //     swap(fx_cache, idx, indices[idx]);
-        //     // swap(points, idx, indices[idx]);
-        //     swap(indices, idx, indices[idx]);
-        //     // vector_println(fx_cache);
-        //     // vector_println(indices);
-        // }
         i++;
     }
     points = next_points;
     fx_cache = next_cache;
-    // cout << "\npoints after sort: \n";
-    // print_points();
-    // cout << "cache after sort: \n";
-    // vector_println(fx_cache);
-    // cout << "indices after sort: \n\n";
-    // vector_println(indices);
 }
 
 /**
@@ -523,11 +485,9 @@ solution *opt::solve_helper()
             "Insufficient initial points provided before calling `opt::solve`");
     }
     int num_iters = 0;
-    bool started = false;
-    while (!should_terminate() || !started || num_iters < MIN_ITERS)
+    while (!should_terminate())
     {
         step();
-        started = true;
         num_iters++;
 #ifdef DEBUG
         cout << "\n=============="
