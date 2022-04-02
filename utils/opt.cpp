@@ -28,6 +28,17 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->last_stddev = 0;
     this->points = vector<vector<double>>();
     this->num_points = 0;
+
+    this->ALPHA = 1;
+#ifdef ANMS
+    this->BETA = 1 + 2 / d;
+    this->GAMMA = 0.75 - 0.5 / d;
+    this->DELTA = 1. - 1. / d;
+#else
+    this->BETA = 2.;
+    this->GAMMA = 0.5;
+    this->DELTA = 0.5;
+#endif
 }
 
 /**

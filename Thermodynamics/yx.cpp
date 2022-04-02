@@ -291,6 +291,9 @@ void ModifiedRaoultModel::generate_Txy_single_thread(double start,
         thread_Ty.emplace_back(y1, T);
     }
 
+    // Mutual exclusion actually isn't needed for correctness here. We just
+    // don't want cores to keep prefetching the entire output vector to their
+    // caches and invalidate other cores' cache lines.
     mtx.lock();
     for (int i = 0; i < num_steps; i++)
     {
@@ -322,9 +325,6 @@ void ModifiedRaoultModel::generate_Txy_data(int num_points,
     double step_size = (end - start) / (num_points - 1);
     double x1, y1, T;
 
-    // Mutual exclusion actually isn't needed here. We just don't want cores to
-    // keep prefetching the entire output vector to their caches and invalidate
-    // other cores' cache lines.
     mutex answer_mtx;
 
     // Assign each worker a partition of output graph

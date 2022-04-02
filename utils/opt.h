@@ -18,15 +18,6 @@ using namespace std;
 
 #define MIN_ITERS 100
 
-#ifdef ANMS
-#define ALPHA 1
-#define BETA 1 + 2 / d
-#define GAMMA 0.75 - 0.5 / d
-#define DELTA 1 - 1 / d
-#else
-const double ALPHA = 1, BETA = 2, GAMMA = 0.5, DELTA = 0.5;
-#endif
-
 typedef double (*opt_func_t)(const vector<double> &x, void *context);
 
 class solution
@@ -49,6 +40,10 @@ private:
     void *context;
     double last_stddev;
     int num_points;
+    double ALPHA;
+    double BETA;
+    double GAMMA;
+    double DELTA;
 
     void sort_by_opt_function();
     vector<double> get_centroid();

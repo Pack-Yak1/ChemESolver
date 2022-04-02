@@ -7,10 +7,10 @@ DISTL=Distillation/mc_cabe_thiele.o
 OUTPUT_FMTS=*/*.csv *.csv */*.dat *.dat
 EXE=tests/opt_test tests/yx_test tests/mt_test tests/opt_test
 
-opt.o: 
+utils/opt.o: 
 	$(CC) $(CFLAGS) -c utils/opt.cpp -o utils/opt.o 
 
-opt: tests/opt_test.o $(UTILS)
+opt: $(UTILS) tests/opt_test.o 
 	$(CC) -o tests/opt_test tests/opt_test.o $(UTILS) $(LINKS)
 	tests/opt_test
 
