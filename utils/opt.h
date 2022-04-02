@@ -37,6 +37,7 @@ private:
     opt_func_t f;
     unsigned int d;
     vector<vector<double>> points;
+    vector<double> fx_cache;
     void *context;
     double last_stddev;
     int num_points;

@@ -88,7 +88,7 @@ int main()
     random_device rd;
     default_random_engine eng(rd());
     uniform_real_distribution<double> distr(MIN, MAX);
-    for (int num_dimensions = 10; num_dimensions < 20; num_dimensions++)
+    for (int num_dimensions = 1; num_dimensions < 20; num_dimensions++)
     {
         n_dimensional_test_suite(num_dimensions, NUM_ITERS, MIN, MAX, eng,
                                  distr);

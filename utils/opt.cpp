@@ -28,12 +28,13 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->last_stddev = 0;
     this->points = vector<vector<double>>();
     this->num_points = 0;
+    this->fx_cache = vector<double>();
 
     this->ALPHA = 1;
-#ifdef ANMS
-    this->BETA = 1 + 2 / d;
-    this->GAMMA = 0.75 - 0.5 / d;
-    this->DELTA = 1. - 1. / d;
+#if defined(ANMS)
+    this->BETA = d >= 2 ? 1 + 2 / d : 2.;
+    this->GAMMA = d >= 2 ? 0.75 - 0.5 / d : 0.5;
+    this->DELTA = d >= 2 ? 1. - 1. / d : 0.5;
 #else
     this->BETA = 2.;
     this->GAMMA = 0.5;
@@ -56,54 +57,116 @@ void opt::set_polytope(vector<vector<double>> &points)
 
 void opt::set_context(void *context) { this->context = context; }
 
+void swap(vector<double> &arr, int i, int j)
+{
+    cout << i << ", " << arr[i] << ", " << j << ", " << arr[j] << '\n';
+    double tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+}
+
+void swap(vector<vector<double>> &arr, int i, int j)
+{
+    vector<double> tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+}
+
 /**
  * @brief Sorts `points` in place. After sorting, `points` = `[x1, ..., xn]`
  * such that f(x1) <= ... <= f(xn).
  */
 void opt::sort_by_opt_function()
 {
-    auto comparator = [&](vector<double> p1, vector<double> p2) -> bool
+    // auto comparator = [&](vector<double> p1, vector<double> p2) -> bool
+    // {
+    //     // Check if dimensions correct
+    //     if (p1.size() != d || p2.size() != d)
+    //     {
+    //         // `sort_by_opt_function` given `points` argument containing vector
+    //         // of incorrect dimensions.
+    //         throw invalid_argument(
+    //             "Dimensions of vectors do not match in `sort_by_opt_function`. "
+    //             "Ensure that all points provided to `set_polytope` match the "
+    //             "dimension of the problem.");
+    //     }
+    //     double f1 = f(p1, context);
+    //     double f2 = f(p2, context);
+    //     double cmp;
+    //     if (isnan(f1))
+    //     {
+    //         cmp = 1;
+    //     }
+    //     else if (isnan(f2))
+    //     {
+    //         cmp = -1;
+    //     }
+    //     else
+    //     {
+    //         cmp = f(p1, context) - f(p2, context);
+    //     }
+    //     if (cmp == 0)
+    //     {
+    //         // Consistent tie break needed for Nelder-Meads
+    //         for (int i = 0; i < d; i++)
+    //         {
+    //             double entry_cmp = p1[i] - p2[i];
+    //             if (entry_cmp != 0)
+    //             {
+    //                 return entry_cmp < 0;
+    //             }
+    //         }
+    //     }
+    //     return cmp < 0;
+    // };
+    // sort(points.begin(), points.end(), comparator);
+
+    auto comparator = [this](int left, int right) -> bool
     {
-        // Check if dimensions correct
-        if (p1.size() != d || p2.size() != d)
-        {
-            // `sort_by_opt_function` given `points` argument containing vector
-            // of incorrect dimensions.
-            throw invalid_argument(
-                "Dimensions of vectors do not match in `sort_by_opt_function`. "
-                "Ensure that all points provided to `set_polytope` match the "
-                "dimension of the problem.");
-        }
-        double f1 = f(p1, context);
-        double f2 = f(p2, context);
-        double cmp;
-        if (isnan(f1))
-        {
-            cmp = 1;
-        }
-        else if (isnan(f2))
-        {
-            cmp = -1;
-        }
-        else
-        {
-            cmp = f(p1, context) - f(p2, context);
-        }
-        if (cmp == 0)
-        {
-            // Consistent tie break needed for Nelder-Meads
-            for (int i = 0; i < d; i++)
-            {
-                double entry_cmp = p1[i] - p2[i];
-                if (entry_cmp != 0)
-                {
-                    return entry_cmp < 0;
-                }
-            }
-        }
-        return cmp < 0;
+        // sort indices according to corresponding array element
+        return fx_cache[left] < fx_cache[right];
     };
-    sort(points.begin(), points.end(), comparator);
+    // Argsort and store indices
+    vector<double> indices(num_points);
+    std::iota(indices.begin(), indices.end(), 0);
+    // cout << "points: \n";
+    // print_points();
+    // cout << "cache: \n";
+    // vector_println(fx_cache);
+
+    sort(indices.begin(), indices.end(), comparator);
+    // cout << "indices: \n";
+    // vector_println(indices);
+    int i = 0;
+    vector<double> next_cache;
+    vector<vector<double>> next_points;
+    // vector_println(indices);
+
+    while (i < num_points)
+    {
+        int idx = indices[i];
+        double element = fx_cache[idx];
+        next_cache.emplace_back(element);
+        // cout << "got element=" << element << " at cache[" << idx << "]\n";
+        next_points.emplace_back(points[idx]);
+        // while (indices[idx] != idx)
+        // {
+        //     swap(fx_cache, idx, indices[idx]);
+        //     // swap(points, idx, indices[idx]);
+        //     swap(indices, idx, indices[idx]);
+        //     // vector_println(fx_cache);
+        //     // vector_println(indices);
+        // }
+        i++;
+    }
+    points = next_points;
+    fx_cache = next_cache;
+    // cout << "\npoints after sort: \n";
+    // print_points();
+    // cout << "cache after sort: \n";
+    // vector_println(fx_cache);
+    // cout << "indices after sort: \n\n";
+    // vector_println(indices);
 }
 
 /**
@@ -164,6 +227,7 @@ bool opt::reflect(const vector<double> &centroid, double f_1, double f_n,
         cout << "Accepted reflection point\n";
 #endif
         points.back() = x_r;
+        fx_cache.back() = f_r;
         return true;
     }
     return false;
@@ -193,6 +257,7 @@ void opt::expand(const vector<double> &centroid, const vector<double> &x_r,
         cout << "accepted expansion point\n";
 #endif
         points.back() = x_e;
+        fx_cache.back() = f_e;
     }
     else
     {
@@ -200,6 +265,7 @@ void opt::expand(const vector<double> &centroid, const vector<double> &x_r,
         cout << "accepted reflection point\n";
 #endif
         points.back() = x_r;
+        fx_cache.back() = f_r;
     }
 }
 
@@ -246,6 +312,7 @@ bool opt::inside_contract(const vector<double> &centroid, double f_n1)
         cout << "accepted inside contraction point\n";
 #endif
         points.back() = x_ic;
+        fx_cache.back() = f_ic;
         return true;
     }
     return false;
@@ -263,6 +330,7 @@ void opt::shrink(const vector<double> &x_1)
     {
         multiply_in_place(DELTA, points[i]);
         sum_in_place(points[i], multiply(1 - DELTA, x_1));
+        fx_cache[i] = f(points[i], context);
 #ifdef DEBUG
         cout << "Point " << i << " was updated to ";
         vector_println(points[i]);
@@ -287,9 +355,12 @@ void opt::step()
     cout << "Sorted points: \n";
     print_points(true);
 #endif
-    double f_1 = f(points.front(), context);
-    double f_n = f(points[num_points - 2], context);
-    double f_n1 = f(points.back(), context);
+    double f_1 = fx_cache.front();
+    // f(points.front(), context);
+    double f_n = fx_cache[num_points - 2];
+    // f(points[num_points - 2], context);
+    double f_n1 = fx_cache.back();
+    // f(points.back(), context);
     vector<double> centroid = get_centroid();
 
     // Step 2
@@ -325,6 +396,7 @@ void opt::step()
             cout << "accepted outside contraction point \n";
 #endif
             points.back() = x_oc;
+            fx_cache.back() = f_oc;
             return;
         }
         else
@@ -383,7 +455,7 @@ void opt::print_points(bool display_fx)
 solution *opt::make_solution()
 {
     sort_by_opt_function();
-    return new solution(points.front(), f(points.front(), context));
+    return new solution(points.front(), fx_cache.front());
 }
 
 /**
@@ -397,6 +469,13 @@ vector<double> opt::eval_all()
     vector<double> output(num_points, 0.);
     for (int i = 0; i < output.size(); i++)
     {
+        if (points[i].size() != d)
+        {
+            throw invalid_argument(
+                "Dimension of vector do not match specified dimension in "
+                "`eval_all`. Ensure that all points provided to `set_polytope`"
+                " match the dimension of the problem.");
+        }
         output[i] = f(points[i], context);
     }
     return output;
@@ -411,18 +490,17 @@ vector<double> opt::eval_all()
  */
 bool opt::should_terminate()
 {
-    vector<double> vals = eval_all();
-    int n = vals.size();
+    // int n = vals.size();
     double mean = 0;
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < num_points; i++)
     {
-        mean += vals[i] / n;
+        mean += fx_cache[i] / num_points;
     }
 
     double stddev = 0;
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < num_points; i++)
     {
-        stddev += pow(vals[i] - mean, 2.) / n;
+        stddev += pow(fx_cache[i] - mean, 2.) / num_points;
     }
     bool output = abs(stddev / last_stddev - 1) < STDDEV_TOL;
     output = output || stddev == last_stddev; // Handle 0/0
@@ -451,6 +529,10 @@ solution *opt::solve_helper()
         step();
         started = true;
         num_iters++;
+#ifdef DEBUG
+        cout << "\n=============="
+             << "ITERATION NUMBER " << num_iters << "=================\n";
+#endif
         if (num_iters > NON_TERMINATING)
         {
             cerr
@@ -477,5 +559,6 @@ solution *opt::solve(const vector<double> &lb, const vector<double> &ub)
         initial_points.emplace_back(to_add);
     }
     set_polytope(initial_points);
+    this->fx_cache = eval_all();
     return solve_helper();
 }
