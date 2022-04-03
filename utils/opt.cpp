@@ -25,7 +25,6 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->f = f;
     this->d = d;
     this->context = context;
-    this->last_stddev = 0;
     this->points = vector<vector<double>>();
     this->num_points = 0;
     this->fx_cache = vector<double>();
@@ -84,11 +83,11 @@ void opt::sort_by_opt_function()
         double cmp;
         double f1 = fx_cache[left];
         double f2 = fx_cache[right];
-        if (isnan(f1))
+        if (isnan(f1) || isinf(f1))
         {
             cmp = 1;
         }
-        else if (isnan(f2))
+        else if (isnan(f2) || isinf(f2))
         {
             cmp = -1;
         }
@@ -114,7 +113,7 @@ void opt::sort_by_opt_function()
     vector<double> indices(num_points);
     std::iota(indices.begin(), indices.end(), 0);
     sort(indices.begin(), indices.end(), comparator);
-    
+
     int i = 0;
     vector<double> next_cache;
     vector<vector<double>> next_points;
@@ -464,9 +463,8 @@ bool opt::should_terminate()
     {
         stddev += pow(fx_cache[i] - mean, 2.) / num_points;
     }
-    bool output = abs(stddev / last_stddev - 1) < STDDEV_TOL;
-    output = output || stddev == last_stddev; // Handle 0/0
-    last_stddev = stddev;
+    // cout << "stddev = " << stddev << '\n';
+    bool output = stddev < STDDEV_TOL;
     return output;
 }
 
@@ -485,7 +483,7 @@ solution *opt::solve_helper()
             "Insufficient initial points provided before calling `opt::solve`");
     }
     int num_iters = 0;
-    while (!should_terminate())
+    while (!should_terminate() || num_iters < MIN_ITERS)
     {
         step();
         num_iters++;

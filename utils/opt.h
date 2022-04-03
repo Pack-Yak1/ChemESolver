@@ -12,9 +12,11 @@ using namespace std;
 #ifndef NM_opt
 #define NM_opt
 
-#define STDDEV_TOL DBL_MIN
+#define STDDEV_TOL 1e-20
 
 #define NON_TERMINATING 1e5
+
+#define MIN_ITERS 100
 
 typedef double (*opt_func_t)(const vector<double> &x, void *context);
 
@@ -37,7 +39,6 @@ private:
     vector<vector<double>> points;
     vector<double> fx_cache;
     void *context;
-    double last_stddev;
     int num_points;
     double ALPHA;
     double BETA;

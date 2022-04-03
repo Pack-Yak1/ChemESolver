@@ -4,16 +4,26 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
 
 #include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <random>
-#include <string>
+#include <string.h>
 #include <vector>
 
+const int MIN_DIMENSIONS = 1;
+const int MAX_DIMENSIONS = 101;
+const double MIN = -100;
+const double MAX = 100;
+const double NUM_ITERS = 10;
+
+string STATS_FILENAME = "opt_stats.csv";
+
 // Requires: f_data points to a vector of doubles with the same size as x.
-double foo(const vector<double> &x, void *f_data)
+double
+foo(const vector<double> &x, void *f_data)
 {
     vector<double> answers = *(vector<double> *)f_data;
     double output = 0;
@@ -27,7 +37,8 @@ double foo(const vector<double> &x, void *f_data)
 
 void n_dimensional_test_suite(int num_dimensions, int NUM_ITERS, double MIN,
                               double MAX, default_random_engine eng,
-                              uniform_real_distribution<double> distr)
+                              uniform_real_distribution<double> distr,
+                              ostream &output_file)
 {
     cout << "Test solving a " << num_dimensions
          << "-dimensional problem with random solution\n";
@@ -42,11 +53,12 @@ void n_dimensional_test_suite(int num_dimensions, int NUM_ITERS, double MIN,
         {
             answers[i] = distr(eng);
         }
+#ifdef VERBOSE
         cout << "Test iteration " << test_iter << " for " << num_dimensions
              << "-dimensional problem\n";
         cout << "True solution:     ";
         vector_println(answers);
-
+#endif
         // Produce solution and record time
         opt o2(foo, &answers, num_dimensions);
         auto start = chrono::high_resolution_clock::now();
@@ -56,18 +68,19 @@ void n_dimensional_test_suite(int num_dimensions, int NUM_ITERS, double MIN,
         total_time += chrono::duration<double>(stop - start).count();
 
         // Compare solution to answers
-        cout << "Solution obtained: ";
-        vector_println(s2->x);
-        cout << "Value of objective function: " << s2->fx << "\n";
         vector<double> errs(num_dimensions, 0.);
         for (int i = 0; i < num_dimensions; i++)
         {
             errs[i] = abs(answers[i] / s2->x[i] - 1) * 100;
         }
+#ifdef VERBOSE
+        cout << "Solution obtained: ";
+        vector_println(s2->x);
+        cout << "Value of objective function: " << s2->fx << "\n";
         cout << "Errors:            ";
         vector_println(errs);
         cout << '\n';
-
+#endif
         // Update max error seen and total error
         double iter_max_error = *max_element(errs.begin(), errs.end());
         max_error = max(iter_max_error, max_error);
@@ -77,21 +90,22 @@ void n_dimensional_test_suite(int num_dimensions, int NUM_ITERS, double MIN,
     cout << "Average time taken: " << total_time / NUM_ITERS << "\n";
     cout << "Highest error: " << max_error << "%\n";
     cout << "Average error: " << total_error / NUM_ITERS << "%\n\n";
+    output_file << num_dimensions << "," << total_time / NUM_ITERS << "," << max_error << "," << total_error / NUM_ITERS << "\n";
 }
 
 int main()
 {
     // Test 1
-    const double MIN = -100;
-    const double MAX = 100;
-    const double NUM_ITERS = 10;
     random_device rd;
     default_random_engine eng(rd());
     uniform_real_distribution<double> distr(MIN, MAX);
-    for (int num_dimensions = 100; num_dimensions < 101; num_dimensions++)
+    ofstream output_file;
+    output_file.open(STATS_FILENAME);
+    for (int num_dimensions = MIN_DIMENSIONS; num_dimensions < MAX_DIMENSIONS; num_dimensions++)
     {
         n_dimensional_test_suite(num_dimensions, NUM_ITERS, MIN, MAX, eng,
-                                 distr);
+                                 distr, output_file);
     }
+    output_file.close();
     return 0;
 }
