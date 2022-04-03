@@ -12,11 +12,11 @@ using namespace std;
 #ifndef NM_opt
 #define NM_opt
 
-#define STDDEV_TOL 1e-20
+const int NON_TERMINATING = 1e5;
 
-#define NON_TERMINATING 1e5
+const int MIN_ITERS = 100;
 
-#define MIN_ITERS 100
+const double STDDEV_TOL = 1e-20;
 
 typedef double (*opt_func_t)(const vector<double> &x, void *context);
 

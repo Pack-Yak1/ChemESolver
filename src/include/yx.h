@@ -1,5 +1,5 @@
-#include "../utils/coords.h"
-#include "../utils/units.h"
+#include "coords.h"
+#include "units.h"
 #include "antoine.h"
 #include "gnuplot-iostream.h"
 #include "vector"
@@ -9,9 +9,9 @@ using namespace std;
 #ifndef yx
 #define yx
 
-#define x_var 0
-#define y_var 1
-#define T_var 2
+int const x_var = 0;
+int const y_var = 1;
+int const T_var = 2;
 
 const double REL_XTOL = 1e-10;
 

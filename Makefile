@@ -1,30 +1,90 @@
 CC=g++
-LINKS=-lm -lpthread
-OPTFLAGS=-DANMS -g 
-TESTFLAGS=
-UTILS=utils/units.o utils/coords.o utils/opt.o utils/vector_ops.o
-THERMO=Thermodynamics/yx.o Thermodynamics/wilson.o Thermodynamics/antoine.o
-DISTL=Distillation/mc_cabe_thiele.o
-OUTPUT_FMTS=*/*.csv *.csv */*.dat *.dat
-EXE=tests/opt_test tests/yx_test tests/mt_test tests/opt_test
+CFLAGS=-pthread
+OPTFLAGS=-DANMS
 
-utils/%.o: utils/%.cpp
-	$(CC) $(OPTFLAGS) -c $^ -o $@ 
+INCLUDE=src/include/
 
-tests/%.o: tests/%.cpp
-	$(CC) $(TESTFLAGS) -c $^ -o $@ 
+LIB_SRC=src/lib/
+LIB_BUILD=build/lib/
 
-opt: $(UTILS) tests/opt_test.o 
-	$(CC) -o tests/opt_test tests/opt_test.o $(UTILS) $(LINKS)
-	tests/opt_test
+APP_SRC=src/apps/
+APP_BUILD=build/apps/
+APP_EXE=bin/
 
-yx: $(UTILS) $(THERMO) tests/yx_test.o 
-	$(CC) -o tests/yx_test tests/yx_test.o $(THERMO) $(UTILS) $(LINKS)
-	tests/yx_test
+TEST_SRC=src/tests/
+TEST_BUILD=build/tests/
+TEST_EXE=test_bin/
 
-mt: $(UTILS) $(THERMO) $(DISTL) tests/mt_test.o
-	$(CC) -o tests/mt_test tests/mt_test.o $(DISTL) $(THERMO) $(UTILS) $(LINKS)
-	tests/mt_test
+BINARIES=bin/
+LIB_NAME=ChemESolver
+
+# Library modules
+UTILS=units coords vector_ops opt
+THERMO=yx wilson antoine
+DISTL=mc_cabe_thiele
+LIB_OBJS=$(addprefix $(LIB_BUILD), $(addsuffix .o, $(UTILS) $(THERMO) $(DISTL)))
+
+# Apps and tests
+TESTS=opt_test yx_test mt_test
+TEST_OBJS=$(patsubst %, $(TEST_BUILD)%.o, $(TESTS))
+TEST_TARGETS=$(patsubst $(TEST_SRC)%.cpp, $(TEST_EXE)%, $(wildcard $(TEST_SRC)*.cpp))
+APP_OBJS=$(patsubst $(APP_SRC)%.cpp, $(APP_BUILD)%.o, $(wildcard $(APP_SRC)*.cpp))
+APP_TARGETS=$(patsubst $(APP_SRC)%.cpp, $(APP_EXE)%, $(wildcard $(APP_SRC)*.cpp))
+
+# Library static archive
+STATICLIB=$(BINARIES)/lib$(LIB_NAME).a
+
+OUTPUT_FMTS=*/*.csv *.csv */*.dat *.dat *.txt
+
+.PHONY: utils.o thermo.o mt.o clean clean2 lib.o tests all all2 staticlib
+
+all: apps $(STATICLIB)
+
+all2: all tests
+
+# Make object files for library
+
+$(LIB_BUILD)%.o: $(LIB_SRC)%.cpp
+	$(CC) $(OPTFLAGS) -c $^ -o $@ -I$(INCLUDE)
+
+utils.o: $(addsuffix .o, $(addprefix $(LIB_BUILD), $(UTILS)))
+
+thermo.o: $(addsuffix .o, $(addprefix $(LIB_BUILD), $(THERMO)))
+
+mt.o: $(addsuffix .o, $(addprefix $(LIB_BUILD), $(DISTL)))
+
+lib.o: utils.o thermo.o mt.o
+
+# Make app and test object files and executable apps
+
+.SECONDARY: $(TEST_OBJS) $(APP_OBJS)
+
+$(APP_BUILD)%.o: $(APP_SRC)%.cpp
+	$(CC) -c $^ -o $@ -I$(INCLUDE)
+
+$(APP_EXE)%: $(APP_BUILD)%.o $(LIB_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(TEST_BUILD)%.o: $(TEST_SRC)%.cpp
+	$(CC) -c $^ -o $@ -I$(INCLUDE)
+
+$(TEST_EXE)%: $(TEST_BUILD)%.o $(LIB_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+tests: $(TEST_TARGETS)
+
+apps: $(APP_TARGETS)
+
+# Clean build and executable files
 
 clean:
-	rm -f $(DISTL) $(THERMO) $(UTILS) $(OUTPUT_FMTS) $(EXE) tests/*.o
+	rm -f $(LIB_BUILD)*.o $(APP_BUILD)*.o $(TEST_BUILD)*.o $(BINARIES)*.a
+	$(patsubst %, find % -type f  ! -name "*.*"  -delete;, $(APP_EXE) $(TEST_EXE))
+
+# Clean output files as well
+
+clean2: clean
+	rm -f $(OUTPUT_FMTS)
+
+$(STATICLIB): 
+	ar rcs $@ $(wildcard build/lib/*.o)

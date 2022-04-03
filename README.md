@@ -2,6 +2,19 @@
 
 Calculation package for Chemical Engineering problems
 
+## Usage
+
+Header files specifying interfaces are in `src/include`. Source files for 
+ChemESolver's modules are in `src/lib`. 
+
+To include ChemESolver's modules in your application, simply run `make all` and
+add the flags `-L<path>bin -I<path>src/include -lChemESolver` when compiling 
+your project.
+
+Alternatively, users can write C++ programs in `src/apps` and run `make all` to
+compile their programs with all dependencies from this library linked. 
+Executables for each C++ source file will be stored in `bin`.
+
 ## Distillation
 
 McCabe-Thiele Analysis for non-ideal liquid mixtures. Currently supports the
@@ -29,9 +42,10 @@ well as a unified interface in the pipeline.
 1. Antoine Model for calculation of vapor pressures/boiling points
 2. Binary Wilson Model for calculation of liquid phase activity coefficients
 3. VLE models utilizing Antoine and Binary Wilson Models to determine binary mixture properties and solve for equilibrium temperature/compositions
+4. Equilibrium diagram (Txy, xy) diagram data computation
 
 #### Misc. (utils)
 
 1. Support for implicit unit conversions
 2. Rudimentary vector operations (E.g. arithmetic, display, linspace/mesh generation)
-3. Solver using Nelder-Meads algorithm for non-gradient based optimization
+3. Solver using Adaptive Nelder-Mead Simplex algorithm for non-gradient based optimization

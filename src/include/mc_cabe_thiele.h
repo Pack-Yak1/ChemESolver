@@ -1,7 +1,7 @@
-#include "../Thermodynamics/antoine.h"
-#include "../Thermodynamics/wilson.h"
-#include "../Thermodynamics/yx.h"
-#include "../utils/units.h"
+#include "antoine.h"
+#include "wilson.h"
+#include "yx.h"
+#include "units.h"
 #include <stdbool.h>
 
 #ifndef mc_cabe_thiele

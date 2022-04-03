@@ -11,9 +11,9 @@
 #include <vector>
 #include <mutex>
 
-#include "../utils/coords.h"
-#include "../utils/opt.h"
-#include "../utils/units.h"
+#include "coords.h"
+#include "opt.h"
+#include "units.h"
 #include "antoine.h"
 #include "gnuplot-iostream.h"
 #include "wilson.h"

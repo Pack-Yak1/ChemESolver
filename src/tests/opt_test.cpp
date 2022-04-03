@@ -1,4 +1,4 @@
-#include "../utils/opt.h"
+#include "opt.h"
 
 #include <float.h>
 #include <math.h>

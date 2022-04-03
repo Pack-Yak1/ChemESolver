@@ -1,4 +1,5 @@
 #include "opt.h"
+#include "vector_ops.h"
 
 #include <float.h>
 #include <math.h>
@@ -10,7 +11,6 @@
 #include <random>
 #include <vector>
 
-#include "vector_ops.h"
 
 using namespace std;
 

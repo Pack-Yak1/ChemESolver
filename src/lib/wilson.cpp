@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "../utils/units.h"
+#include "units.h"
 using namespace std;
 
 BinaryWilsonModel::BinaryWilsonModel() {

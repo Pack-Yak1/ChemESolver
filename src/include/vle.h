@@ -1,7 +1,7 @@
-#include "../Thermodynamics/antoine.h"
-#include "../Thermodynamics/wilson.h"
-#include "../utils/units.h"
-#include "../utils/coords.h"
+#include "antoine.h"
+#include "wilson.h"
+#include "units.h"
+#include "coords.h"
 #include <vector>
 
 using namespace std;

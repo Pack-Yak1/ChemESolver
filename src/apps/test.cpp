@@ -1,12 +1,12 @@
 #include <vector>
 #include <thread>
 
-#include "../Distillation/mc_cabe_thiele.h"
-#include "../Thermodynamics/antoine.h"
-#include "../Thermodynamics/wilson.h"
-#include "../Thermodynamics/yx.h"
-#include "../utils/coords.h"
-#include "../utils/units.h"
+#include "mc_cabe_thiele.h"
+#include "antoine.h"
+#include "wilson.h"
+#include "yx.h"
+#include "coords.h"
+#include "units.h"
 
 using namespace std;
 
