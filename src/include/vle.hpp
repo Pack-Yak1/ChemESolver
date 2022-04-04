@@ -1,7 +1,7 @@
-#include "antoine.h"
-#include "wilson.h"
-#include "units.h"
-#include "coords.h"
+#include "antoine.hpp"
+#include "wilson.hpp"
+#include "units.hpp"
+#include "coords.hpp"
 #include <vector>
 
 using namespace std;

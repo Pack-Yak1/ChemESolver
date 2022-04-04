@@ -1,13 +1,13 @@
-#include "mc_cabe_thiele.h"
+#include "mc_cabe_thiele.hpp"
 
 #include <vector>
 
-#include "antoine.h"
-#include "wilson.h"
-#include "yx.h"
-#include "coords.h"
-#include "units.h"
-#include "opt.h"
+#include "antoine.hpp"
+#include "wilson.hpp"
+#include "yx.hpp"
+#include "coords.hpp"
+#include "units.hpp"
+#include "opt.hpp"
 
 using namespace std;
 

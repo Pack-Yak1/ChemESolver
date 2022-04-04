@@ -1,4 +1,3 @@
-#include "yx.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -10,13 +9,14 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include <cassert>
 
-#include "coords.h"
-#include "opt.h"
-#include "units.h"
-#include "antoine.h"
-#include "gnuplot-iostream.h"
-#include "wilson.h"
+#include "yx.hpp"
+#include "coords.hpp"
+#include "opt.hpp"
+#include "units.hpp"
+#include "antoine.hpp"
+#include "wilson.hpp"
 
 using namespace std;
 

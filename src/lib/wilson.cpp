@@ -1,4 +1,4 @@
-#include "wilson.h"
+#include "wilson.hpp"
 
 #include <math.h>
 #include <stdbool.h>
@@ -6,10 +6,11 @@
 
 #include <iostream>
 
-#include "units.h"
+#include "units.hpp"
 using namespace std;
 
-BinaryWilsonModel::BinaryWilsonModel() {
+BinaryWilsonModel::BinaryWilsonModel()
+{
     v1 = v2 = delta_l12 = delta_l21 = 0;
     hasTemp = false;
 }
@@ -17,7 +18,8 @@ BinaryWilsonModel::BinaryWilsonModel() {
 // Initializes an instance of BinaryWilsonModel which does not have a
 // specified temperature
 BinaryWilsonModel::BinaryWilsonModel(double v1, double v2, double delta_l12,
-                                     double delta_l21) {
+                                     double delta_l21)
+{
     this->v1 = v1;
     this->v2 = v2;
     this->delta_l12 = delta_l12;
@@ -29,7 +31,8 @@ BinaryWilsonModel::BinaryWilsonModel(double v1, double v2, double delta_l12,
 // `T` in units of `t_unit`
 BinaryWilsonModel::BinaryWilsonModel(double v1, double v2, double delta_l12,
                                      double delta_l21, double T,
-                                     T_unit t_unit) {
+                                     T_unit t_unit)
+{
     this->v1 = v1;
     this->v2 = v2;
     this->delta_l12 = delta_l12;
@@ -40,7 +43,8 @@ BinaryWilsonModel::BinaryWilsonModel(double v1, double v2, double delta_l12,
     L21 = v1 / v2 * exp(-delta_l21 / IDEAL_GAS_CONST / t);
 }
 
-void BinaryWilsonModel::setT(double T, T_unit t_unit) {
+void BinaryWilsonModel::setT(double T, T_unit t_unit)
+{
     double t = convert_T(T, t_unit, T_unit::K);
     L12 = v2 / v1 * exp(-delta_l12 / IDEAL_GAS_CONST / t);
     L21 = v1 / v2 * exp(-delta_l21 / IDEAL_GAS_CONST / t);
@@ -49,8 +53,10 @@ void BinaryWilsonModel::setT(double T, T_unit t_unit) {
 
 // Returns the activity coefficient of component 1 for a BinaryWilsonModel
 // which already has a specified temperature
-double BinaryWilsonModel::gamma1(double x1) {
-    if (!hasTemp) {
+double BinaryWilsonModel::gamma1(double x1)
+{
+    if (!hasTemp)
+    {
         throw invalid_argument(
             "Called gamma1 from BinaryWilsonModel with no specified "
             "temperature.");
@@ -62,13 +68,16 @@ double BinaryWilsonModel::gamma1(double x1) {
 
 // Destructively modifies this BinaryWilsonModel and returns the acitivity
 // coefficient of component 1 at temperature `T` in units of `t_unit`.
-double BinaryWilsonModel::gamma1(double x1, double T, T_unit t_unit) {
+double BinaryWilsonModel::gamma1(double x1, double T, T_unit t_unit)
+{
     setT(T, t_unit);
     return gamma1(x1);
 }
 
-double BinaryWilsonModel::gamma2(double x2) {
-    if (!hasTemp) {
+double BinaryWilsonModel::gamma2(double x2)
+{
+    if (!hasTemp)
+    {
         throw invalid_argument(
             "Called gamma2 from BinaryWilsonModel with no specified "
             "temperature.");
@@ -80,7 +89,8 @@ double BinaryWilsonModel::gamma2(double x2) {
 
 // Destructively modifies this BinaryWilsonModel and returns the acitivity
 // coefficient of component 2 at temperature `T` in units of `t_unit`.
-double BinaryWilsonModel::gamma2(double x2, double T, T_unit t_unit) {
+double BinaryWilsonModel::gamma2(double x2, double T, T_unit t_unit)
+{
     setT(T, t_unit);
     return gamma2(x2);
 }

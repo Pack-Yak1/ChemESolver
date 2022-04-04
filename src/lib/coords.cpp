@@ -1,4 +1,4 @@
-#include "coords.h"
+#include "coords.hpp"
 
 Point::Point(double x, double y)
 {

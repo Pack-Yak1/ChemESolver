@@ -1,9 +1,11 @@
-#include "coords.h"
-#include "units.h"
-#include "antoine.h"
-#include "gnuplot-iostream.h"
+#include <mutex>
+
+#include "coords.hpp"
+#include "units.hpp"
+#include "antoine.hpp"
 #include "vector"
-#include "wilson.h"
+#include "wilson.hpp"
+
 using namespace std;
 
 #ifndef yx

@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <iostream>
 #include <math.h>
-#include "units.h"
-#include "antoine.h"
+#include "units.hpp"
+#include "antoine.hpp"
 using namespace std;
 
 AntoineModel::AntoineModel()

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
-#include "vector_ops.h"
+#include "vector_ops.hpp"
 
 using namespace std;
 

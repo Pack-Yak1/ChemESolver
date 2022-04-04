@@ -1,7 +1,7 @@
-#include "antoine.h"
-#include "wilson.h"
-#include "yx.h"
-#include "units.h"
+#include "antoine.hpp"
+#include "wilson.hpp"
+#include "yx.hpp"
+#include "units.hpp"
 #include <stdbool.h>
 
 #ifndef mc_cabe_thiele

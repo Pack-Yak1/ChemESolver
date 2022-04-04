@@ -34,7 +34,8 @@ APP_TARGETS=$(patsubst $(APP_SRC)%.cpp, $(APP_EXE)%, $(wildcard $(APP_SRC)*.cpp)
 # Library static archive
 STATICLIB=$(BINARIES)/lib$(LIB_NAME).a
 
-OUTPUT_FMTS=*/*.csv *.csv */*.dat *.dat *.txt
+OUTPUT_FMTS=csv dat txt
+OUTPUTS=$(foreach fmt, $(OUTPUT_FMTS), *.$(fmt) */*.$(fmt))
 
 .PHONY: utils.o thermo.o mt.o clean clean2 lib.o tests all all2 staticlib
 
@@ -73,6 +74,9 @@ $(TEST_EXE)%: $(TEST_BUILD)%.o $(LIB_OBJS)
 
 tests: $(TEST_TARGETS)
 
+tests2: tests
+	$(foreach test, $(TEST_TARGETS), $(test) > $(test).txt &)
+
 apps: $(APP_TARGETS)
 
 # Clean build and executable files
@@ -84,7 +88,7 @@ clean:
 # Clean output files as well
 
 clean2: clean
-	rm -f $(OUTPUT_FMTS)
+	rm -f $(OUTPUTS)
 
 $(STATICLIB): 
 	ar rcs $@ $(wildcard build/lib/*.o)

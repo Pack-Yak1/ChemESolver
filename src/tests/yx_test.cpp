@@ -1,11 +1,12 @@
 #include <vector>
 #include <thread>
+#include <fstream>
 
-#include "antoine.h"
-#include "wilson.h"
-#include "yx.h"
-#include "coords.h"
-#include "units.h"
+#include "antoine.hpp"
+#include "wilson.hpp"
+#include "yx.hpp"
+#include "coords.hpp"
+#include "units.hpp"
 
 using namespace std;
 
