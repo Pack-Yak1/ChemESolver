@@ -46,16 +46,6 @@ ModifiedRaoultModel::ModifiedRaoultModel()
     this->p_unit = P_unit::Pa;
 }
 
-ModifiedRaoultModel::ModifiedRaoultModel(const ModifiedRaoultModel &m)
-{
-    this->a1 = m.a1;
-    this->a2 = m.a2;
-    this->b = m.b;
-    this->t_unit = m.t_unit;
-    this->P = m.P;
-    this->p_unit = m.p_unit;
-}
-
 ModifiedRaoultModel::ModifiedRaoultModel(AntoineModel a1, AntoineModel a2,
                                          BinaryWilsonModel b, T_unit t_unit,
                                          double P, P_unit p_unit)
@@ -323,7 +313,6 @@ void ModifiedRaoultModel::generate_Txy_data(int num_points,
     Tx_data.reserve(num_points);
     Ty_data.reserve(num_points);
     double step_size = (end - start) / (num_points - 1);
-    double x1, y1, T;
 
     mutex answer_mtx;
 

@@ -59,7 +59,7 @@ public:
     // rectifying section operating line as the first and second elements.
     // `strip_line` is a vector with the gradient and y-intercept
     // of the stripping section operating line as the first and second elements
-    vector<Point> pseudo_equilibrium_curve(int num_points,
+    vector<Point> pseudo_equilibrium_curve(unsigned int num_points,
                                            double efficiency,
                                            vector<double> rect_line,
                                            vector<double> strip_line,
@@ -68,7 +68,7 @@ public:
     // Returns a vector of points plotting a pseudo-equilibrium curve from
     // `this->xB` to `this->xD` with size `num_points` for the given
     // `efficiency`. `R` is the reflux ratio. `VB` is the boilup ratio.
-    vector<Point> pseudo_equilibrium_curve(int num_points,
+    vector<Point> pseudo_equilibrium_curve(unsigned int num_points,
                                            double efficiency,
                                            double R,
                                            double VB,

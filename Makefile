@@ -1,6 +1,7 @@
 CC=g++
-CFLAGS=-pthread
+CFLAGS=-pthread# -Wall -Werror -Wextra
 OPTFLAGS=-DANMS
+LIBFLAGS=-fPIC
 
 INCLUDE=src/include/
 
@@ -31,22 +32,26 @@ TEST_TARGETS=$(patsubst $(TEST_SRC)%.cpp, $(TEST_EXE)%, $(wildcard $(TEST_SRC)*.
 APP_OBJS=$(patsubst $(APP_SRC)%.cpp, $(APP_BUILD)%.o, $(wildcard $(APP_SRC)*.cpp))
 APP_TARGETS=$(patsubst $(APP_SRC)%.cpp, $(APP_EXE)%, $(wildcard $(APP_SRC)*.cpp))
 
-# Library static archive
-STATICLIB=$(BINARIES)/lib$(LIB_NAME).a
+# Library static and shared archives
+LIBDEPS=$(wildcard build/lib/*.o)
+STATICDIR=$(BINARIES)static/
+SHAREDDIR=$(BINARIES)shared/
+STATICLIB=$(STATICDIR)lib$(LIB_NAME).a
+SHAREDLIB=$(SHAREDDIR)lib$(LIB_NAME).so
 
 OUTPUT_FMTS=csv dat txt
 OUTPUTS=$(foreach fmt, $(OUTPUT_FMTS), *.$(fmt) */*.$(fmt))
 
 .PHONY: utils.o thermo.o mt.o clean clean2 lib.o tests all all2 staticlib
 
-all: apps $(STATICLIB)
+all: apps $(STATICLIB) $(SHAREDLIB)
 
 all2: all tests
 
 # Make object files for library
 
 $(LIB_BUILD)%.o: $(LIB_SRC)%.cpp
-	$(CC) $(OPTFLAGS) -c $^ -o $@ -I$(INCLUDE)
+	$(CC) $(CFLAGS) $(OPTFLAGS) -c $^ -o $@ -I$(INCLUDE) $(LIBFLAGS)
 
 utils.o: $(addsuffix .o, $(addprefix $(LIB_BUILD), $(UTILS)))
 
@@ -61,20 +66,20 @@ lib.o: utils.o thermo.o mt.o
 .SECONDARY: $(TEST_OBJS) $(APP_OBJS)
 
 $(APP_BUILD)%.o: $(APP_SRC)%.cpp
-	$(CC) -c $^ -o $@ -I$(INCLUDE)
+	$(CC) $(CFLAGS) -c $^ -o $@ -I$(INCLUDE)
 
 $(APP_EXE)%: $(APP_BUILD)%.o $(LIB_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(TEST_BUILD)%.o: $(TEST_SRC)%.cpp
-	$(CC) -c $^ -o $@ -I$(INCLUDE)
+	$(CC) $(CFLAGS) -c $^ -o $@ -I$(INCLUDE)
 
 $(TEST_EXE)%: $(TEST_BUILD)%.o $(LIB_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 tests: $(TEST_TARGETS)
 
-tests2: tests
+run: tests
 	$(foreach test, $(TEST_TARGETS), $(test) > $(test).txt &)
 
 apps: $(APP_TARGETS)
@@ -82,7 +87,7 @@ apps: $(APP_TARGETS)
 # Clean build and executable files
 
 clean:
-	rm -f $(LIB_BUILD)*.o $(APP_BUILD)*.o $(TEST_BUILD)*.o $(BINARIES)*.a
+	rm -f $(LIB_BUILD)*.o $(APP_BUILD)*.o $(TEST_BUILD)*.o $(STATICDIR)*.a $(SHAREDDIR)*.so
 	$(patsubst %, find % -type f  ! -name "*.*"  -delete;, $(APP_EXE) $(TEST_EXE))
 
 # Clean output files as well
@@ -90,5 +95,17 @@ clean:
 clean2: clean
 	rm -f $(OUTPUTS)
 
-$(STATICLIB): 
-	ar rcs $@ $(wildcard build/lib/*.o)
+$(STATICDIR): 
+	mkdir $(STATICDIR)
+
+$(STATICLIB): $(STATICDIR) 
+	ar rcs $@ $(LIBDEPS)
+
+$(SHAREDDIR):
+	mkdir $(SHAREDDIR)
+
+$(SHAREDLIB): $(SHAREDDIR)
+	$(CC) -shared $(LIBDEPS) -o $@ $(CFLAGS)
+
+foo:
+	g++ -Lbin/shared mt_test.cpp -o test -lChemESolver -I$(INCLUDE)

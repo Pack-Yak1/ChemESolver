@@ -7,9 +7,17 @@ Calculation package for Chemical Engineering problems
 Header files specifying interfaces are in `src/include`. Source files for 
 ChemESolver's modules are in `src/lib`. 
 
-To include ChemESolver's modules in your application, simply run `make all` and
-add the flags `-L<path>bin -I<path>src/include -lChemESolver` when compiling 
-your project.
+To include ChemESolver's modules in your application, simply run `make all`. 
+This produces shared and static libraries in `bin/shared` and `bin/static`, 
+respectively. To use the static library, compile your program with the flags
+
+```-L<path>bin/static -I<path>src/include -lChemESolver```
+
+To use the shared library, compile your program with the flags
+
+```-L<path>bin/shared -I<path>src/include -lChemESolver -Wl,-rpath=<path>bin/shared```
+
+after your program's source file(s).
 
 Alternatively, users can write C++ programs in `src/apps` and run `make all` to
 compile their programs with all dependencies from this library linked. 

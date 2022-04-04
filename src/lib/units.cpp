@@ -49,6 +49,8 @@ double convert_P(double P, P_unit initial, P_unit final)
             return P / 6895;
         case mmHg:
             return P / 133;
+        default:
+            throw invalid_argument("Unrecognized unit of pressure.");
         }
         break;
     case bar:
@@ -60,6 +62,8 @@ double convert_P(double P, P_unit initial, P_unit final)
             return P * 14.5038;
         case mmHg:
             return P * 750;
+        default:
+            throw invalid_argument("Unrecognized unit of pressure.");
         }
         break;
     case psi:
@@ -71,6 +75,8 @@ double convert_P(double P, P_unit initial, P_unit final)
             return P / 14.5038;
         case mmHg:
             return P * 51.715;
+        default:
+            throw invalid_argument("Unrecognized unit of pressure.");
         }
         break;
     case mmHg:
@@ -82,6 +88,8 @@ double convert_P(double P, P_unit initial, P_unit final)
             return P / 750;
         case psi:
             return P / 51.715;
+        default:
+            throw invalid_argument("Unrecognized unit of pressure.");
         }
         break;
     default:

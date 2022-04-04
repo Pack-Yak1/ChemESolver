@@ -97,7 +97,7 @@ void opt::sort_by_opt_function()
         if (cmp == 0)
         {
             // Consistent tie break needed for Nelder-Meads
-            for (int i = 0; i < d; i++)
+            for (size_t i = 0; i < d; i++)
             {
                 double entry_cmp = points[left][i] - points[right][i];
                 if (entry_cmp != 0)
@@ -113,7 +113,7 @@ void opt::sort_by_opt_function()
     std::iota(indices.begin(), indices.end(), 0);
     sort(indices.begin(), indices.end(), comparator);
 
-    int i = 0;
+    unsigned int i = 0;
     vector<double> next_cache;
     vector<vector<double>> next_points;
 
@@ -138,7 +138,7 @@ void opt::sort_by_opt_function()
 vector<double> opt::get_centroid()
 {
     vector<double> output(d, 0.);
-    for (int i = 0; i < num_points - 1; i++)
+    for (unsigned int i = 0; i < num_points - 1; i++)
     {
         sum_in_place(output, points[i]);
 #ifdef DEBUG
@@ -286,7 +286,7 @@ bool opt::inside_contract(const vector<double> &centroid, double f_n1)
  */
 void opt::shrink(const vector<double> &x_1)
 {
-    for (int i = 1; i < num_points; i++)
+    for (unsigned int i = 1; i < num_points; i++)
     {
         multiply_in_place(DELTA, points[i]);
         sum_in_place(points[i], multiply(1 - DELTA, x_1));
@@ -427,7 +427,7 @@ solution *opt::make_solution()
 vector<double> opt::eval_all()
 {
     vector<double> output(num_points, 0.);
-    for (int i = 0; i < output.size(); i++)
+    for (size_t i = 0; i < output.size(); i++)
     {
         if (points[i].size() != d)
         {
@@ -452,13 +452,13 @@ bool opt::should_terminate()
 {
     // int n = vals.size();
     double mean = 0;
-    for (int i = 0; i < num_points; i++)
+    for (unsigned int i = 0; i < num_points; i++)
     {
         mean += fx_cache[i] / num_points;
     }
 
     double stddev = 0;
-    for (int i = 0; i < num_points; i++)
+    for (unsigned int i = 0; i < num_points; i++)
     {
         stddev += pow(fx_cache[i] - mean, 2.) / num_points;
     }
@@ -506,7 +506,7 @@ solution *opt::solve(const vector<double> &lb, const vector<double> &ub)
     vector<vector<double>> initial_points;
     double num_vertices = d + 1;
     initial_points.reserve(num_vertices);
-    for (int i = 0; i < num_vertices; i++)
+    for (size_t i = 0; i < num_vertices; i++)
     {
         vector<double> to_add(lb);
         if (i < d)

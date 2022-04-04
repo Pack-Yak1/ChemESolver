@@ -131,7 +131,7 @@ double MT::min_reflux(double q)
     return -gradient / (gradient - 1);
 }
 
-vector<Point> MT::pseudo_equilibrium_curve(int num_points,
+vector<Point> MT::pseudo_equilibrium_curve(unsigned int num_points,
                                            double efficiency,
                                            vector<double> rect_line,
                                            vector<double> strip_line,
@@ -143,8 +143,7 @@ vector<Point> MT::pseudo_equilibrium_curve(int num_points,
     m.generate_Txy_data(num_points, Tx_data, Ty_data, xB, xD, n_workers);
     vector<Point> output;
     output.reserve(num_points);
-    double step_size = (xD - xB) / (num_points - 1);
-    for (int i = 0; i < num_points; i++)
+    for (unsigned int i = 0; i < num_points; i++)
     {
         double x = Tx_data[i].x;
         double y = Ty_data[i].x;
@@ -170,8 +169,9 @@ vector<Point> MT::pseudo_equilibrium_curve(int num_points,
     return output;
 }
 
-vector<Point> MT::pseudo_equilibrium_curve(int num_points, double efficiency,
-                                           double R, double VB, int n_workers)
+vector<Point> MT::pseudo_equilibrium_curve(unsigned int num_points,
+                                           double efficiency, double R,
+                                           double VB, int n_workers)
 {
     return pseudo_equilibrium_curve(num_points, efficiency, rectifying_line(R),
                                     stripping_line(VB), n_workers);

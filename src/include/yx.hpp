@@ -45,11 +45,6 @@ public:
                         T_unit t_unit, double P, P_unit p_unit);
 
     /**
-     * @brief Copy constructor for ModifiedRaoultModel
-     */
-    ModifiedRaoultModel(const ModifiedRaoultModel &m);
-
-    /**
      * @brief Solve the system for liquid and vapor phase mole fractions of
      * component 1 and temperature, given any of the 3. Denoted as (x1, y1, T),
      * respectively.

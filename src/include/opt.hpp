@@ -35,11 +35,11 @@ class opt
 {
 private:
     opt_func_t f;
-    unsigned int d;
+    size_t d;
     vector<vector<double>> points;
     vector<double> fx_cache;
     void *context;
-    int num_points;
+    unsigned int num_points;
     double ALPHA;
     double BETA;
     double GAMMA;

@@ -47,7 +47,7 @@ void set_xy_test(ModifiedRaoultModel m, AntoineModel a1, AntoineModel a2)
     output_file.close();
 }
 
-void set_Tx_test(ModifiedRaoultModel m, AntoineModel a1, AntoineModel a2)
+void set_Tx_test(ModifiedRaoultModel m)
 {
     double x1, temp;
     ofstream output_file;
@@ -75,11 +75,11 @@ int main()
 
     // Tests solving system from temperature
     cout << "Test `set_xy`\n";
-    // set_xy_test(m, a1, a2);
+    set_xy_test(m, a1, a2);
 
     // Tests solving system from vap mole frac constraint
     cout << "Test `set_Tx`\n";
-    // set_Tx_test(m, a1, a2);
+    set_Tx_test(m);
 
     return 0;
 }
