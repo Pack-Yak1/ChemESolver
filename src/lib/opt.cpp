@@ -26,7 +26,9 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->context = context;
     this->points = vector<vector<double>>();
     this->num_points = 0;
-    this->fx_cache = vector<double>();
+    this->fx_cache = vector<double>(d, 0.);
+    this->centroid = vector<double>(d, 0.);
+    this->last_accepted = vector<double>(d, 0.);
 
     this->ALPHA = 1;
 #if defined(ANMS)
@@ -38,6 +40,13 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->GAMMA = 0.5;
     this->DELTA = 0.5;
 #endif
+}
+
+void opt::accept(vector<double> point, double value)
+{
+    points.back() = point;
+    fx_cache.back() = value;
+    last_accepted = point;
 }
 
 /**
@@ -130,28 +139,36 @@ void opt::sort_by_opt_function()
 }
 
 /**
- * @brief Find the centroid of all but the last point in `points`.
+ * @brief Sets the centroid of all but the last point in `points`. If `accepted`
+ * is true, assumes `points` is sorted by `sort by opt function` and that
+ * `last_accepted` is set.
  *
- * @return vector<double> The centroid of all but the worst (highest f(x)) point
- * in `points`
+ * @param accepted True if this function is called in an iteration of the
+ * Nelder-Mead algorithm after a non-shrink step which invoked `accept`.
+ *
  */
-vector<double> opt::get_centroid()
+void opt::set_centroid(bool accepted)
 {
-    vector<double> output(d, 0.);
+    double denom = (double)num_points - 1.;
+    if (accepted)
+    {
+        sum_in_place(centroid, points.back(), 1., -1. / denom);
+        sum_in_place(centroid, last_accepted, 1., 1. / denom);
+        return;
+    }
+    centroid = vector<double>(d, 0.);
     for (unsigned int i = 0; i < num_points - 1; i++)
     {
-        sum_in_place(output, points[i]);
+        sum_in_place(centroid, points[i], 1., 1. / denom);
 #ifdef DEBUG
         cout << "iter " << i << " ended. output = ";
-        vector_println(output);
+        vector_println(centroid);
 #endif
     }
-    multiply_in_place(1 / ((double)num_points - 1), output);
 #ifdef DEBUG
     cout << "Centroid calculated: ";
-    vector_println(output);
+    vector_println(centroid);
 #endif
-    return output;
 }
 
 /**
@@ -186,8 +203,7 @@ bool opt::reflect(const vector<double> &centroid, double f_1, double f_n,
 #ifdef DEBUG
         cout << "Accepted reflection point\n";
 #endif
-        points.back() = x_r;
-        fx_cache.back() = f_r;
+        accept(x_r, f_r);
         return true;
     }
     return false;
@@ -216,16 +232,14 @@ void opt::expand(const vector<double> &centroid, const vector<double> &x_r,
 #ifdef DEBUG
         cout << "accepted expansion point\n";
 #endif
-        points.back() = x_e;
-        fx_cache.back() = f_e;
+        accept(x_e, f_e);
     }
     else
     {
 #ifdef DEBUG
         cout << "accepted reflection point\n";
 #endif
-        points.back() = x_r;
-        fx_cache.back() = f_r;
+        accept(x_r, f_r);
     }
 }
 
@@ -271,8 +285,7 @@ bool opt::inside_contract(const vector<double> &centroid, double f_n1)
 #ifdef DEBUG
         cout << "accepted inside contraction point\n";
 #endif
-        points.back() = x_ic;
-        fx_cache.back() = f_ic;
+        accept(x_ic, f_ic);
         return true;
     }
     return false;
@@ -301,8 +314,11 @@ void opt::shrink(const vector<double> &x_1)
 /**
  * @brief Main loop of the Nelder Mead algorithm
  *
+ * @return true iff this iteration accepted a single point (i.e. did not use a
+ * shrink operation)
+ *
  */
-void opt::step()
+bool opt::step(bool accepted)
 {
     // print_points(true);
 #ifdef DEBUG
@@ -316,19 +332,16 @@ void opt::step()
     print_points(true);
 #endif
     double f_1 = fx_cache.front();
-    // f(points.front(), context);
     double f_n = fx_cache[num_points - 2];
-    // f(points[num_points - 2], context);
     double f_n1 = fx_cache.back();
-    // f(points.back(), context);
-    vector<double> centroid = get_centroid();
+    set_centroid(accepted);
 
     // Step 2
     double f_r;
     vector<double> x_r(d, 0.);
     if (reflect(centroid, f_1, f_n, f_r, x_r))
     {
-        return;
+        return true;
     }
     f_r = isnan(f_r) ? DBL_MAX : f_r;
 
@@ -336,7 +349,7 @@ void opt::step()
     if (f_r < f_1)
     {
         expand(centroid, x_r, f_r);
-        return;
+        return true;
     }
 
     // Step 4
@@ -355,15 +368,14 @@ void opt::step()
 #ifdef DEBUG
             cout << "accepted outside contraction point \n";
 #endif
-            points.back() = x_oc;
-            fx_cache.back() = f_oc;
-            return;
+            accept(x_oc, f_oc);
+            return true;
         }
         else
         {
             // Skip to step 6
             shrink(points[0]);
-            return;
+            return false;
         }
     }
 
@@ -372,12 +384,13 @@ void opt::step()
     {
         if (inside_contract(centroid, f_n1))
         {
-            return;
+            return true;
         }
     }
 
     // Step 6
     shrink(points[0]);
+    return false;
 }
 
 /**
@@ -482,9 +495,10 @@ solution *opt::solve_helper()
             "Insufficient initial points provided before calling `opt::solve`");
     }
     int num_iters = 0;
+    bool accepted = false;
     while (!should_terminate() || num_iters < MIN_ITERS)
     {
-        step();
+        accepted = step(accepted);
         num_iters++;
 #ifdef DEBUG
         cout << "\n=============="
@@ -517,5 +531,6 @@ solution *opt::solve(const vector<double> &lb, const vector<double> &ub)
     }
     set_polytope(initial_points);
     this->fx_cache = eval_all();
+    set_centroid(false);
     return solve_helper();
 }

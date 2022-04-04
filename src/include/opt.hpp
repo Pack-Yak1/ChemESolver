@@ -16,7 +16,7 @@ const int NON_TERMINATING = 1e5;
 
 const int MIN_ITERS = 100;
 
-const double STDDEV_TOL = 1e-20;
+const double STDDEV_TOL = 1e-50;
 
 typedef double (*opt_func_t)(const vector<double> &x, void *context);
 
@@ -38,6 +38,8 @@ private:
     size_t d;
     vector<vector<double>> points;
     vector<double> fx_cache;
+    vector<double> centroid;
+    vector<double> last_accepted;
     void *context;
     unsigned int num_points;
     double ALPHA;
@@ -45,8 +47,9 @@ private:
     double GAMMA;
     double DELTA;
 
+    void accept(vector<double> point, double value);
     void sort_by_opt_function();
-    vector<double> get_centroid();
+    void set_centroid(bool accepted);
     bool reflect(const vector<double> &centroid, double f_1, double f_n,
                  double &f_r, vector<double> &x_r);
     void expand(const vector<double> &centroid, const vector<double> &x_r,
@@ -55,7 +58,7 @@ private:
                                     const vector<double> &x_r);
     bool inside_contract(const vector<double> &centroid, double f_n1);
     void shrink(const vector<double> &x1);
-    void step();
+    bool step(bool accepted);
     solution *make_solution();
     vector<double> eval_all();
     bool should_terminate();

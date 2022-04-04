@@ -10,7 +10,7 @@
 
 using namespace std;
 
-const int NUM_POINTS = 10000;
+const int NUM_POINTS = 10;
 const unsigned int MAX_THREADS = thread::hardware_concurrency();
 
 int main()

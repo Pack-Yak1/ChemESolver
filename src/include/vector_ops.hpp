@@ -25,9 +25,10 @@ void multiply_in_place(double c, vector<double> &v);
 vector<double> multiply(double c, const vector<double> &v);
 
 /**
- * @brief Stores the vector sum of `v1` and `v2` in `v1`.
+ * @brief Stores the vector sum of `c1 * v1` and `c2 * v2` in `v1`.
  */
-void sum_in_place(vector<double> &v1, const vector<double> &v2);
+void sum_in_place(vector<double> &v1, const vector<double> &v2, double c1 = 1.,
+                  double c2 = 1.);
 
 vector<double> sum(const vector<double> &v1, const vector<double> &v2);
 

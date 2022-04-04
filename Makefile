@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-pthread# -Wall -Werror -Wextra
+CFLAGS=-pthread# -Wall -Werror -Wextra -g
 OPTFLAGS=-DANMS
 LIBFLAGS=-fPIC
 
@@ -42,13 +42,28 @@ SHAREDLIB=$(SHAREDDIR)lib$(LIB_NAME).so
 OUTPUT_FMTS=csv dat txt
 OUTPUTS=$(foreach fmt, $(OUTPUT_FMTS), *.$(fmt) */*.$(fmt))
 
-.PHONY: utils.o thermo.o mt.o clean clean2 lib.o tests all all2 staticlib
+.PHONY: utils.o thermo.o mt.o lib.o clean clean2 tests all all2
 
-all: apps $(STATICLIB) $(SHAREDLIB)
+# Build apps and libraries for users
+all: lib.o apps $(STATICLIB) $(SHAREDLIB)
 
+# Build everything including tests
 all2: all tests
 
-# Make object files for library
+# Run all tests in background and log output
+run: tests
+	$(foreach test, $(TEST_TARGETS), $(test) > $(test).txt &)
+
+# Clean object files, executables and libraries
+clean:
+	rm -f $(LIB_BUILD)*.o $(APP_BUILD)*.o $(TEST_BUILD)*.o $(STATICDIR)*.a $(SHAREDDIR)*.so
+	$(patsubst %, find % -type f  ! -name "*.*"  -delete;, $(APP_EXE) $(TEST_EXE))
+
+# Clean output files as well
+clean2: clean
+	rm -f $(OUTPUTS)
+
+# Rules for building library
 
 $(LIB_BUILD)%.o: $(LIB_SRC)%.cpp
 	$(CC) $(CFLAGS) $(OPTFLAGS) -c $^ -o $@ -I$(INCLUDE) $(LIBFLAGS)
@@ -61,7 +76,7 @@ mt.o: $(addsuffix .o, $(addprefix $(LIB_BUILD), $(DISTL)))
 
 lib.o: utils.o thermo.o mt.o
 
-# Make app and test object files and executable apps
+# Rules for building apps and tests
 
 .SECONDARY: $(TEST_OBJS) $(APP_OBJS)
 
@@ -79,26 +94,14 @@ $(TEST_EXE)%: $(TEST_BUILD)%.o $(LIB_OBJS)
 
 tests: $(TEST_TARGETS)
 
-run: tests
-	$(foreach test, $(TEST_TARGETS), $(test) > $(test).txt &)
-
 apps: $(APP_TARGETS)
 
-# Clean build and executable files
-
-clean:
-	rm -f $(LIB_BUILD)*.o $(APP_BUILD)*.o $(TEST_BUILD)*.o $(STATICDIR)*.a $(SHAREDDIR)*.so
-	$(patsubst %, find % -type f  ! -name "*.*"  -delete;, $(APP_EXE) $(TEST_EXE))
-
-# Clean output files as well
-
-clean2: clean
-	rm -f $(OUTPUTS)
+# Rules for building libraries
 
 $(STATICDIR): 
 	mkdir $(STATICDIR)
 
-$(STATICLIB): $(STATICDIR) 
+$(STATICLIB): $(STATICDIR)
 	ar rcs $@ $(LIBDEPS)
 
 $(SHAREDDIR):
@@ -107,5 +110,12 @@ $(SHAREDDIR):
 $(SHAREDLIB): $(SHAREDDIR)
 	$(CC) -shared $(LIBDEPS) -o $@ $(CFLAGS)
 
-foo:
-	g++ -Lbin/shared mt_test.cpp -o test -lChemESolver -I$(INCLUDE)
+# Convenience utilities for development
+opt: $(TEST_EXE)opt_test
+	test_bin/opt_test
+
+yx: $(TEST_EXE)yx_test
+	test_bin/yx_test
+
+mt: $(TEST_EXE)mt_test
+	test_bin/mt_test

@@ -35,7 +35,7 @@ vector<double> multiply(double c, const vector<double> &v)
     return output;
 }
 
-void sum_in_place(vector<double> &v1, const vector<double> &v2)
+void sum_in_place(vector<double> &v1, const vector<double> &v2, double c1, double c2)
 {
     if (v1.size() != v2.size())
     {
@@ -43,7 +43,7 @@ void sum_in_place(vector<double> &v1, const vector<double> &v2)
     }
     for (size_t dim = 0; dim < v1.size(); dim++)
     {
-        v1[dim] += v2[dim];
+        v1[dim] = c1 * v1[dim] + c2 * v2[dim];
     }
 }
 
