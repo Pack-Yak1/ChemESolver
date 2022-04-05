@@ -1,9 +1,10 @@
 CC=g++
-CFLAGS=-pthread# -Wall -Werror -Wextra -g
+CFLAGS=-pthread -Wall -Werror -Wextra -g
 OPTFLAGS=-DANMS
 LIBFLAGS=-fPIC
 
 INCLUDE=src/include/
+LIB_HEADERS=$(wildcard $(INCLUDE)*.hpp)
 
 LIB_SRC=src/lib/
 LIB_BUILD=build/lib/
@@ -65,8 +66,8 @@ clean2: clean
 
 # Rules for building library
 
-$(LIB_BUILD)%.o: $(LIB_SRC)%.cpp
-	$(CC) $(CFLAGS) $(OPTFLAGS) -c $^ -o $@ -I$(INCLUDE) $(LIBFLAGS)
+$(LIB_BUILD)%.o: $(LIB_SRC)%.cpp $(LIB_HEADERS)
+	$(CC) $(CFLAGS) $(OPTFLAGS) -c $< -o $@ -I$(INCLUDE) $(LIBFLAGS)
 
 utils.o: $(addsuffix .o, $(addprefix $(LIB_BUILD), $(UTILS)))
 

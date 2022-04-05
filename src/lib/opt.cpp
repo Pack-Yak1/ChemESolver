@@ -31,7 +31,7 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
     this->last_accepted = vector<double>(d, 0.);
 
     this->ALPHA = 1;
-#if defined(ANMS)
+#ifdef ANMS
     this->BETA = d >= 2 ? 1 + 2 / d : 2.;
     this->GAMMA = d >= 2 ? 0.75 - 0.5 / d : 0.5;
     this->DELTA = d >= 2 ? 1. - 1. / d : 0.5;
@@ -64,19 +64,53 @@ void opt::set_polytope(vector<vector<double>> &points)
 
 void opt::set_context(void *context) { this->context = context; }
 
-void swap(vector<double> &arr, int i, int j)
+// void swap(vector<double> &arr, int i, int j)
+// {
+//     double tmp = arr[i];
+//     arr[i] = arr[j];
+//     arr[j] = tmp;
+// }
+
+template <typename T>
+void swap(vector<T> &arr, int i, int j)
 {
-    cout << i << ", " << arr[i] << ", " << j << ", " << arr[j] << '\n';
-    double tmp = arr[i];
+    T tmp = arr[i];
     arr[i] = arr[j];
     arr[j] = tmp;
 }
 
-void swap(vector<vector<double>> &arr, int i, int j)
+/**
+ * @brief Reorders vectors v1 and v2 by in the order specified by indices.
+ * Assumes indices contains exactly one of each integer from [0..n-1] where n
+ * is the size of all arguments passed to this function.
+ *
+ * Destructively modifies `indices`. Values of `indices` are unspecified after
+ * this function is called.
+ *
+ */
+template <typename T1, typename T2>
+void apply_indices(vector<double> &indices, vector<T1> &v1, vector<T2> &v2)
 {
-    vector<double> tmp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = tmp;
+    if (!(indices.size() == v1.size() && v1.size() == v2.size()))
+    {
+        throw invalid_argument(
+            "Attempted to apply indices to vectors of different size");
+    }
+    size_t n = indices.size();
+    size_t tmp;
+    for (size_t origin = 0; origin < n; origin++)
+    {
+        size_t i = origin;
+        while (origin != indices[i] && indices[i] != -1)
+        {
+            swap(v1, indices[i], i);
+            swap(v2, indices[i], i);
+            tmp = indices[i];
+            indices[i] = -1;
+            i = tmp;
+        }
+        indices[i] = -1;
+    }
 }
 
 /**
@@ -86,7 +120,7 @@ void swap(vector<vector<double>> &arr, int i, int j)
 void opt::sort_by_opt_function()
 {
     // Comparator to sort by cached value in fx_cache, using points to tie break
-    auto comparator = [this](int left, int right) -> bool
+    auto comparator = [this](size_t left, size_t right) -> bool
     {
         double cmp;
         double f1 = fx_cache[left];
@@ -122,20 +156,7 @@ void opt::sort_by_opt_function()
     std::iota(indices.begin(), indices.end(), 0);
     sort(indices.begin(), indices.end(), comparator);
 
-    unsigned int i = 0;
-    vector<double> next_cache;
-    vector<vector<double>> next_points;
-
-    while (i < num_points)
-    {
-        int idx = indices[i];
-        double element = fx_cache[idx];
-        next_cache.emplace_back(element);
-        next_points.emplace_back(points[idx]);
-        i++;
-    }
-    points = next_points;
-    fx_cache = next_cache;
+    apply_indices(indices, points, fx_cache);
 }
 
 /**
