@@ -33,8 +33,12 @@ int main()
 
     cout << "Testing min reflux, compare against continuous distillation data\n";
     cout << "For saturated liquid, R_min is: " << mt.min_reflux() << "\n";
-    cout << "For saturated vapor, R_min is: " << mt.min_reflux(0) << "\n";
-    cout << "For q = 0.5, R_min is: " << mt.min_reflux(0.5) << "\n";
+    for (double q = -1.; q < 0.; q += 0.1)
+    {
+        cout << "For q = " << q << ", R_min is: " << mt.min_reflux(q) << "\n";
+    }
+    // cout << "For saturated vapor, R_min is: " << mt.min_reflux(0) << "\n";
+    // cout << "For q = 0.5, R_min is: " << mt.min_reflux(0.5) << "\n";
 
     // ofstream output_file;
     // output_file.open("seps.csv");

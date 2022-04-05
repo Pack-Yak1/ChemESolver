@@ -48,7 +48,7 @@ private:
     double DELTA;
 
     void accept(vector<double> point, double value);
-    void sort_by_opt_function();
+    void sort_by_opt_function(bool accepted);
     void set_centroid(bool accepted);
     bool reflect(const vector<double> &centroid, double f_1, double f_n,
                  double &f_r, vector<double> &x_r);

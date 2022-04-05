@@ -2,7 +2,7 @@
 #include "vector_ops.hpp"
 
 #include <float.h>
-#include <math.h>
+#include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -45,6 +45,10 @@ opt::opt(opt_func_t f, void *context, unsigned int d)
 void opt::accept(vector<double> point, double value)
 {
     points.back() = point;
+    if (isinf(value) || isnan(value))
+    {
+        value = DBL_MAX;
+    }
     fx_cache.back() = value;
     last_accepted = point;
 }
@@ -116,47 +120,74 @@ void apply_indices(vector<double> &indices, vector<T1> &v1, vector<T2> &v2)
 /**
  * @brief Sorts `points` in place. After sorting, `points` = `[x1, ..., xn]`
  * such that f(x1) <= ... <= f(xn).
+ *
+ * @param accepted True if this function is called in an iteration of the
+ * Nelder-Mead algorithm after a non-shrink step which invoked `accept`.
  */
-void opt::sort_by_opt_function()
+#define noop (void)0
+void opt::sort_by_opt_function(bool accepted)
 {
-    // Comparator to sort by cached value in fx_cache, using points to tie break
-    auto comparator = [this](size_t left, size_t right) -> bool
+    if (accepted)
     {
-        double cmp;
-        double f1 = fx_cache[left];
-        double f2 = fx_cache[right];
-        if (isnan(f1) || isinf(f1))
+        // Manual search without std::upper_bound to handle inf/nan.
+        // Insertion sort on last element for O(n) sort
+        double to_insert = fx_cache.back();
+        if (isnan(to_insert) || isinf(to_insert))
         {
-            cmp = 1;
+            return;
         }
-        else if (isnan(f2) || isinf(f2))
+        size_t idx = 0;
+        while (idx < num_points - 1 && fx_cache[idx] <= to_insert && !isnan(fx_cache[idx]) && !isnan(fx_cache[idx]))
         {
-            cmp = -1;
+            idx++;
         }
-        else
+        auto cache_start = fx_cache.begin() + idx;
+        std::rotate(cache_start, fx_cache.end() - 1, fx_cache.end());
+
+        auto points_start = points.begin() + idx;
+        std::rotate(points_start, points.end() - 1, points.end());
+    }
+    else
+    {
+        // Comparator to sort by cached value in fx_cache
+        auto comparator = [this](size_t left, size_t right) -> bool
         {
-            cmp = f1 - f2;
-        }
-        if (cmp == 0)
-        {
-            // Consistent tie break needed for Nelder-Meads
-            for (size_t i = 0; i < d; i++)
+            double cmp;
+            double f1 = fx_cache[left];
+            double f2 = fx_cache[right];
+            if (isnan(f1) || isinf(f1))
             {
-                double entry_cmp = points[left][i] - points[right][i];
-                if (entry_cmp != 0)
+                cmp = 1;
+            }
+            else if (isnan(f2) || isinf(f2))
+            {
+                cmp = -1;
+            }
+            else
+            {
+                cmp = f1 - f2;
+            }
+            if (cmp == 0)
+            {
+                // Consistent tie break needed for Nelder-Meads
+                for (size_t i = 0; i < d; i++)
                 {
-                    return entry_cmp < 0;
+                    double entry_cmp = points[left][i] - points[right][i];
+                    if (entry_cmp != 0)
+                    {
+                        return entry_cmp < 0;
+                    }
                 }
             }
-        }
-        return cmp < 0;
-    };
-    // Argsort and store indices
-    vector<double> indices(num_points);
-    std::iota(indices.begin(), indices.end(), 0);
-    sort(indices.begin(), indices.end(), comparator);
+            return cmp < 0;
+        };
+        // Argsort and store indices
+        vector<double> indices(num_points);
+        std::iota(indices.begin(), indices.end(), 0);
+        std::sort(indices.begin(), indices.end(), comparator);
 
-    apply_indices(indices, points, fx_cache);
+        apply_indices(indices, points, fx_cache);
+    }
 }
 
 /**
@@ -324,7 +355,9 @@ void opt::shrink(const vector<double> &x_1)
     {
         multiply_in_place(DELTA, points[i]);
         sum_in_place(points[i], multiply(1 - DELTA, x_1));
-        fx_cache[i] = f(points[i], context);
+        double result = f(points[i], context);
+        fx_cache[i] = isinf(result) || isnan(result) ? DBL_MAX : result;
+        // fx_cache[i] = f(points[i], context);
 #ifdef DEBUG
         cout << "Point " << i << " was updated to ";
         vector_println(points[i]);
@@ -347,7 +380,7 @@ bool opt::step(bool accepted)
     print_points(true);
 #endif
     // Step 1
-    sort_by_opt_function();
+    sort_by_opt_function(accepted);
 #ifdef DEBUG
     cout << "Sorted points: \n";
     print_points(true);
@@ -364,7 +397,6 @@ bool opt::step(bool accepted)
     {
         return true;
     }
-    f_r = isnan(f_r) ? DBL_MAX : f_r;
 
     // Step 3
     if (f_r < f_1)
@@ -383,7 +415,6 @@ bool opt::step(bool accepted)
         vector_println(x_oc);
 #endif
         double f_oc = f(x_oc, context);
-        f_oc = isnan(f_oc) ? DBL_MAX : f_oc;
         if (f_oc <= f_r)
         {
 #ifdef DEBUG
@@ -433,7 +464,7 @@ void opt::print_points(bool display_fx)
         cout << "]";
         if (display_fx)
         {
-            cout << "     " << f(*it, context);
+            cout << "     f(x) = " << fx_cache[(size_t)(it - points.begin())] << ".";
         }
         cout << "\n";
     }
@@ -448,7 +479,6 @@ void opt::print_points(bool display_fx)
  */
 solution *opt::make_solution()
 {
-    sort_by_opt_function();
     return new solution(points.front(), fx_cache.front());
 }
 
@@ -470,7 +500,9 @@ vector<double> opt::eval_all()
                 "`eval_all`. Ensure that all points provided to `set_polytope`"
                 " match the dimension of the problem.");
         }
-        output[i] = f(points[i], context);
+        double result = f(points[i], context);
+        output[i] = isinf(result) || isnan(result) ? DBL_MAX : result;
+        // output[i] = f(points[i], context);
     }
     return output;
 }
@@ -551,6 +583,10 @@ solution *opt::solve(const vector<double> &lb, const vector<double> &ub)
         initial_points.emplace_back(to_add);
     }
     set_polytope(initial_points);
+#ifdef DEBUG
+    cout << "solver started with points:\n";
+    print_points();
+#endif
     this->fx_cache = eval_all();
     set_centroid(false);
     return solve_helper();

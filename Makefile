@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-pthread -Wall -Werror -Wextra -g
+CFLAGS=-pthread #-Wall -Werror -Wextra -g# -DDEBUG
 OPTFLAGS=-DANMS
 LIBFLAGS=-fPIC
 
@@ -51,9 +51,9 @@ all: lib.o apps $(STATICLIB) $(SHAREDLIB)
 # Build everything including tests
 all2: all tests
 
-# Run all tests in background and log output
+# Run all tests in background and log output. Sequential because we test speed
 run: tests
-	$(foreach test, $(TEST_TARGETS), $(test) > $(test).txt &)
+	$(foreach test, $(TEST_TARGETS), $(test) > $(test).txt &&)
 
 # Clean object files, executables and libraries
 clean:

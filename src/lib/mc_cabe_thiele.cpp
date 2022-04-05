@@ -110,7 +110,7 @@ double min_reflux_objective(const vector<double> &x, void *context)
 // Finds minimum reflux ratio for a specified q-value
 double MT::min_reflux(double q)
 {
-    if (q == 1)
+    if (abs(q - 1) < 1e-8)
     {
         return min_reflux();
     }
@@ -121,11 +121,13 @@ double MT::min_reflux(double q)
     double bp1 = m.tsat_helper(m.a1, m.P);
     double bp2 = m.tsat_helper(m.a2, m.P);
     vector<double> lb{0, 0, 0};
-    vector<double> ub{1, 1, 10 * max(bp1, bp2)};
+    vector<double> ub{1, 1, 100 * max(bp1, bp2)};
 
     solution *soln = solver.solve(lb, ub);
+    cout << "error: " << min_reflux_objective(soln->x, &ctx) << '\n';
     double x_pinch = soln->x[0];
     double y_pinch = soln->x[1];
+    cout << "pinch: " << Point(x_pinch, y_pinch) << '\n';
     double gradient = Line(x_pinch, y_pinch, xD, xD).gradient;
     delete soln;
     return -gradient / (gradient - 1);
