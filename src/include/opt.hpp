@@ -14,8 +14,6 @@ using namespace std;
 
 const int NON_TERMINATING = 1e5;
 
-const int MIN_ITERS = 100;
-
 const double STDDEV_TOL = 1e-30;
 
 typedef double (*opt_func_t)(const vector<double> &x, void *context);

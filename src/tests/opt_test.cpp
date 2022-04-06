@@ -18,6 +18,7 @@ const int MAX_DIMENSIONS = 101;
 const double MIN = -100;
 const double MAX = 100;
 const double NUM_ITERS = 10;
+const bool WRITE_TO_OUTPUT = true;
 
 string STATS_FILENAME = "opt_stats.csv";
 
@@ -90,7 +91,10 @@ void n_dimensional_test_suite(int num_dimensions, int NUM_ITERS, double MIN,
     cout << "Average time taken: " << total_time / NUM_ITERS << "\n";
     cout << "Highest error: " << max_error << "%\n";
     cout << "Average error: " << total_error / NUM_ITERS << "%\n\n";
-    output_file << num_dimensions << "," << total_time / NUM_ITERS << "," << max_error << "," << total_error / NUM_ITERS << "\n";
+    if (WRITE_TO_OUTPUT)
+    {
+        output_file << num_dimensions << "," << total_time / NUM_ITERS << "," << max_error << "," << total_error / NUM_ITERS << "\n";
+    }
 }
 
 int main()
@@ -100,12 +104,18 @@ int main()
     default_random_engine eng(rd());
     uniform_real_distribution<double> distr(MIN, MAX);
     ofstream output_file;
-    output_file.open(STATS_FILENAME);
+    if (WRITE_TO_OUTPUT)
+    {
+        output_file.open(STATS_FILENAME);
+    }
     for (int num_dimensions = MIN_DIMENSIONS; num_dimensions < MAX_DIMENSIONS; num_dimensions++)
     {
         n_dimensional_test_suite(num_dimensions, NUM_ITERS, MIN, MAX, eng,
                                  distr, output_file);
     }
-    output_file.close();
+    if (WRITE_TO_OUTPUT)
+    {
+        output_file.close();
+    }
     return 0;
 }

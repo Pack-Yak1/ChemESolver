@@ -549,7 +549,7 @@ solution *opt::solve_helper()
     }
     int num_iters = 0;
     bool accepted = false;
-    while (!should_terminate() || num_iters < MIN_ITERS)
+    while (!should_terminate())
     {
         accepted = step(accepted);
         num_iters++;
