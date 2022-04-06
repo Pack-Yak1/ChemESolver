@@ -9,6 +9,10 @@
 
 class MT
 {
+private:
+    double min_reflux_sat_liquid();
+    double min_reflux_sat_vapor();
+
 public:
     double xD;
     double xB;
@@ -42,11 +46,6 @@ public:
     // stripping section vapor molar flow rate `Vbar` and bottoms molar flow
     // rate `B`
     vector<double> stripping_line(double Vbar, double B);
-
-    // Returns the minimum reflux ratio of this instance of McCabe-Thiele
-    // analysis assuming saturated liquid feed (i.e. q == 1) and a pinch about
-    // the feed.
-    double min_reflux();
 
     // Returns the minimum reflux ratio of this instance of McCabe-Thiele
     // analysis for the value of `q`, assuming a pinch about the feed.

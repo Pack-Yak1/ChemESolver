@@ -72,14 +72,31 @@ vector<double> MT::stripping_line(double Vbar, double B)
     return stripping_line(VB);
 }
 
-// Assumes saturated liquid feed
-double MT::min_reflux()
+/**
+ * @brief Returns the minimum reflux ratio of this instance of McCabe-Thiele
+ * analysis assuming saturated liquid feed (i.e. q == 1) and a pinch about
+ * the feed.
+ */
+double MT::min_reflux_sat_liquid()
 {
-    double yF = xF;
-    double T;
+    double yF, T;
     m.set_Ty(xF, yF, T);
-    // cout << xF << ',' << yF << ',' << T << '\n';
     double gradient = Line(xF, yF, xD, xD).gradient;
+    return -gradient / (gradient - 1);
+}
+
+/**
+ * @brief Returns the minimum reflux ratio of this instance of McCabe-Thiele
+ * analysis assuming saturated vapor feed (i.e. q == 0) and a pinch about
+ * the feed.
+ */
+double MT::min_reflux_sat_vapor()
+{
+    double y = xF;
+    double x, T;
+    m.set_Tx(x, y, T);
+    // cout << "pinch: " << Point(x, y) << '\n';
+    double gradient = Line(x, y, xD, xD).gradient;
     return -gradient / (gradient - 1);
 }
 
@@ -110,24 +127,50 @@ double min_reflux_objective(const vector<double> &x, void *context)
 // Finds minimum reflux ratio for a specified q-value
 double MT::min_reflux(double q)
 {
-    if (abs(q - 1) < 1e-8)
+    if (abs(q - 1.) < 1e-8)
     {
-        return min_reflux();
+        return min_reflux_sat_liquid();
+    }
+    else if (abs(q - 0.) < 1e-8)
+    {
+        return min_reflux_sat_vapor();
     }
 
     // Formula for q-line from CHEME 3320
+    double x_lb, x_ub, y_lb, y_ub;
+    if (q < 0)
+    {
+        x_lb = 0.;
+        x_ub = xF;
+        y_lb = 0.;
+        y_ub = xF;
+    }
+    else if (q > 1)
+    {
+        x_lb = xF;
+        x_ub = 1.;
+        y_lb = xF;
+        y_ub = 1.;
+    }
+    else
+    {
+        x_lb = 0.;
+        x_ub = xF;
+        y_lb = xF;
+        y_ub = 1.;
+    }
     opt_context ctx(&m, -q / (1. - q), -xF / (q - 1.));
     opt solver(min_reflux_objective, &ctx, 3);
     double bp1 = m.tsat_helper(m.a1, m.P);
     double bp2 = m.tsat_helper(m.a2, m.P);
-    vector<double> lb{0, 0, 0};
-    vector<double> ub{1, 1, 100 * max(bp1, bp2)};
+    vector<double> lb{x_lb, y_lb, 0};
+    vector<double> ub{x_ub, y_ub, 4 * max(bp1, bp2)};
 
     solution *soln = solver.solve(lb, ub);
-    cout << "error: " << min_reflux_objective(soln->x, &ctx) << '\n';
+    // cout << "error: " << min_reflux_objective(soln->x, &ctx) << '\n';
     double x_pinch = soln->x[0];
     double y_pinch = soln->x[1];
-    cout << "pinch: " << Point(x_pinch, y_pinch) << '\n';
+    // cout << "pinch: " << Point(x_pinch, y_pinch) << '\n';
     double gradient = Line(x_pinch, y_pinch, xD, xD).gradient;
     delete soln;
     return -gradient / (gradient - 1);

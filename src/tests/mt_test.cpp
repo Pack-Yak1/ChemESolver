@@ -32,8 +32,8 @@ int main()
     }
 
     cout << "Testing min reflux, compare against continuous distillation data\n";
-    cout << "For saturated liquid, R_min is: " << mt.min_reflux() << "\n";
-    for (double q = -1.; q < 0.; q += 0.1)
+    cout << "For saturated liquid, R_min is: " << mt.min_reflux(1) << "\n";
+    for (double q = -1.; q < 2.; q += 0.01)
     {
         cout << "For q = " << q << ", R_min is: " << mt.min_reflux(q) << "\n";
     }
